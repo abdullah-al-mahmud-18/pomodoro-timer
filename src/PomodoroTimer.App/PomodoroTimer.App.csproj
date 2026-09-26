@@ -3,6 +3,8 @@
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
     <TargetFrameworks>net10.0-windows10.0.19041.0;net10.0</TargetFrameworks>
+    <!-- Lets restore/build/publish run on Linux despite the Windows-specific TFM above (otherwise NETSDK1100). -->
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <BuiltInComInteropSupport>true</BuiltInComInteropSupport>
