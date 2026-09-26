@@ -1,0 +1,9 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/PomodoroTimer.App/PomodoroTimer.App.csproj" />
+    <Project Path="src/PomodoroTimer.Core/PomodoroTimer.Core.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/PomodoroTimer.Core.Tests/PomodoroTimer.Core.Tests.csproj" />
+  </Folder>
+</Solution>
