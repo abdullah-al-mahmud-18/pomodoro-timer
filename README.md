@@ -1,5 +1,7 @@
 # Pomodoro Timer
 
+> This app is vibe coded.
+
 A cross-platform Pomodoro / timer & stopwatch desktop app built with Avalonia UI. Runs on **Windows 11** and **Ubuntu 24.04** from a single codebase.
 
 ## Features
@@ -63,36 +65,11 @@ The database file lives at:
 - Windows: `%LOCALAPPDATA%\PomodoroTimer\pomodoro.db`
 - Linux: `~/.local/share/PomodoroTimer/pomodoro.db`
 
-## Building and running
-
-Requires the .NET 10 SDK.
-
-```bash
-# Restore & build everything
-dotnet build
-
-# Run the app (defaults to the current OS's TFM)
-dotnet run --project src/PomodoroTimer.App/PomodoroTimer.App.csproj
-
-# Run the Core unit tests
-dotnet test tests/PomodoroTimer.Core.Tests/PomodoroTimer.Core.Tests.csproj
-```
-
-## Publishing
-
-Self-contained, single-folder builds per platform:
-
-```bash
-# Windows x64
-dotnet publish src/PomodoroTimer.App/PomodoroTimer.App.csproj -c Release -r win-x64 --self-contained -f net10.0-windows10.0.19041.0 -p:PublishSingleFile=true
-
-# Linux x64
-dotnet publish src/PomodoroTimer.App/PomodoroTimer.App.csproj -c Release -r linux-x64 --self-contained -f net10.0 -p:PublishSingleFile=true
-```
-
-Output lands in `src/PomodoroTimer.App/bin/Release/<tfm>/<rid>/publish/`.
-
 ## Known limitations
 
 - No installer/deployment automation (per CLAUDE.md's non-goals) — publish produces a runnable folder/executable only.
 - The `Tmds.DBus` / `Tmds.DBus.Protocol` packages pulled in transitively by the Linux notification backend (`DesktopNotifications.FreeDesktop`) carry an unfixed NuGet security advisory as of writing (no patched version is published upstream). This only affects the Linux D-Bus notification code path.
+
+## Building, running, and publishing
+
+See [HOWTO.md](HOWTO.md).
