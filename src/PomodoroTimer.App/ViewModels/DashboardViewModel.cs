@@ -40,9 +40,9 @@ public class DashboardViewModel : ViewModelBase
         TotalRows.Add(new DashboardRowViewModel("Last 365 days", report.Last365Days));
 
         AverageRows.Clear();
-        AverageRows.Add(new DashboardRowViewModel("Last 7 days (avg/day)", report.AveragePerDayLast7Days));
-        AverageRows.Add(new DashboardRowViewModel("Last 14 days (avg/day)", report.AveragePerDayLast14Days));
-        AverageRows.Add(new DashboardRowViewModel("Last 30 days (avg/day)", report.AveragePerDayLast30Days));
-        AverageRows.Add(new DashboardRowViewModel("Last 90 days (avg/day)", report.AveragePerDayLast90Days));
+        AverageRows.Add(new DashboardRowViewModel("Last 7 days", report.AveragePerDayLast7Days));
+        AverageRows.Add(new DashboardRowViewModel("Last 14 days", report.AveragePerDayLast14Days));
+        AverageRows.Add(new DashboardRowViewModel("Last 30 days", report.AveragePerDayLast30Days));
+        AverageRows.Add(new DashboardRowViewModel("Last 90 days", report.AveragePerDayLast90Days));
     }
 }

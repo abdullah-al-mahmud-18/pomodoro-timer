@@ -7,6 +7,36 @@
         Width="980" Height="640"
         MinWidth="760" MinHeight="520">
 
+    <!-- Dashboard tables: every header and row uses the same fixed ColumnDefinitions="200,120,120,120",
+         so columns line up regardless of text length. -->
+    <Window.Styles>
+        <Style Selector="Grid.dashColumns > TextBlock">
+            <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
+        <Style Selector="Grid.dashColumns > TextBlock.value">
+            <Setter Property="HorizontalAlignment" Value="Right" />
+        </Style>
+        <Style Selector="Grid.dashHeader > TextBlock">
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="FontWeight" Value="Bold" />
+            <Setter Property="Foreground" Value="Gray" />
+        </Style>
+        <Style Selector="ItemsControl.dashRows ContentPresenter:nth-child(2n)">
+            <Setter Property="Background" Value="#0DFFFFFF" />
+        </Style>
+    </Window.Styles>
+
+    <Window.DataTemplates>
+        <DataTemplate DataType="vm:DashboardRowViewModel" x:DataType="vm:DashboardRowViewModel">
+            <Grid Classes="dashColumns" ColumnDefinitions="200,120,120,120" Margin="16,8">
+                <TextBlock Grid.Column="0" Text="{Binding Label}" FontWeight="Medium" />
+                <TextBlock Grid.Column="1" Classes="value" Text="{Binding WorkDisplay}" />
+                <TextBlock Grid.Column="2" Classes="value" Text="{Binding StudyDisplay}" />
+                <TextBlock Grid.Column="3" Classes="value" Text="{Binding BreakDisplay}" />
+            </Grid>
+        </DataTemplate>
+    </Window.DataTemplates>
+
     <Grid Margin="16" RowDefinitions="Auto,*">
 
         <!-- Top nav bar -->
@@ -147,54 +177,57 @@
 
         <!-- DASHBOARD VIEW -->
         <ScrollViewer Grid.Row="1" IsVisible="{Binding IsDashboardViewActive}">
-            <StackPanel DataContext="{Binding Dashboard}" Spacing="24" MaxWidth="700" HorizontalAlignment="Center">
+            <StackPanel DataContext="{Binding Dashboard}" Spacing="24" HorizontalAlignment="Center">
 
                 <StackPanel Spacing="8">
                     <TextBlock Text="Today" FontSize="18" FontWeight="Bold" />
-                    <ItemsControl ItemsSource="{Binding TodayRows}">
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate x:DataType="vm:DashboardRowViewModel">
-                                <Grid ColumnDefinitions="1.2*,*,*,*" Margin="0,4">
-                                    <TextBlock Grid.Column="0" Text="{Binding Label}" />
-                                    <TextBlock Grid.Column="1" Text="{Binding WorkDisplay, StringFormat='Work: {0}'}" />
-                                    <TextBlock Grid.Column="2" Text="{Binding StudyDisplay, StringFormat='Study: {0}'}" />
-                                    <TextBlock Grid.Column="3" Text="{Binding BreakDisplay, StringFormat='Break: {0}'}" />
+                    <Border BorderBrush="#33FFFFFF" BorderThickness="1" CornerRadius="6" ClipToBounds="True">
+                        <StackPanel>
+                            <Border Background="#1E1E2E" Padding="16,8">
+                                <Grid Classes="dashColumns dashHeader" ColumnDefinitions="200,120,120,120">
+                                    <TextBlock Grid.Column="0" Text="Period" />
+                                    <TextBlock Grid.Column="1" Classes="value" Text="Work" />
+                                    <TextBlock Grid.Column="2" Classes="value" Text="Study" />
+                                    <TextBlock Grid.Column="3" Classes="value" Text="Break" />
                                 </Grid>
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
+                            </Border>
+                            <ItemsControl Classes="dashRows" ItemsSource="{Binding TodayRows}" />
+                        </StackPanel>
+                    </Border>
                 </StackPanel>
 
                 <StackPanel Spacing="8">
                     <TextBlock Text="Totals" FontSize="18" FontWeight="Bold" />
-                    <ItemsControl ItemsSource="{Binding TotalRows}">
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate x:DataType="vm:DashboardRowViewModel">
-                                <Grid ColumnDefinitions="1.2*,*,*,*" Margin="0,4">
-                                    <TextBlock Grid.Column="0" Text="{Binding Label}" />
-                                    <TextBlock Grid.Column="1" Text="{Binding WorkDisplay, StringFormat='Work: {0}'}" />
-                                    <TextBlock Grid.Column="2" Text="{Binding StudyDisplay, StringFormat='Study: {0}'}" />
-                                    <TextBlock Grid.Column="3" Text="{Binding BreakDisplay, StringFormat='Break: {0}'}" />
+                    <Border BorderBrush="#33FFFFFF" BorderThickness="1" CornerRadius="6" ClipToBounds="True">
+                        <StackPanel>
+                            <Border Background="#1E1E2E" Padding="16,8">
+                                <Grid Classes="dashColumns dashHeader" ColumnDefinitions="200,120,120,120">
+                                    <TextBlock Grid.Column="0" Text="Period" />
+                                    <TextBlock Grid.Column="1" Classes="value" Text="Work" />
+                                    <TextBlock Grid.Column="2" Classes="value" Text="Study" />
+                                    <TextBlock Grid.Column="3" Classes="value" Text="Break" />
                                 </Grid>
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
+                            </Border>
+                            <ItemsControl Classes="dashRows" ItemsSource="{Binding TotalRows}" />
+                        </StackPanel>
+                    </Border>
                 </StackPanel>
 
                 <StackPanel Spacing="8">
                     <TextBlock Text="Daily averages" FontSize="18" FontWeight="Bold" />
-                    <ItemsControl ItemsSource="{Binding AverageRows}">
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate x:DataType="vm:DashboardRowViewModel">
-                                <Grid ColumnDefinitions="1.2*,*,*,*" Margin="0,4">
-                                    <TextBlock Grid.Column="0" Text="{Binding Label}" />
-                                    <TextBlock Grid.Column="1" Text="{Binding WorkDisplay, StringFormat='Work: {0}'}" />
-                                    <TextBlock Grid.Column="2" Text="{Binding StudyDisplay, StringFormat='Study: {0}'}" />
-                                    <TextBlock Grid.Column="3" Text="{Binding BreakDisplay, StringFormat='Break: {0}'}" />
+                    <Border BorderBrush="#33FFFFFF" BorderThickness="1" CornerRadius="6" ClipToBounds="True">
+                        <StackPanel>
+                            <Border Background="#1E1E2E" Padding="16,8">
+                                <Grid Classes="dashColumns dashHeader" ColumnDefinitions="200,120,120,120">
+                                    <TextBlock Grid.Column="0" Text="Period" />
+                                    <TextBlock Grid.Column="1" Classes="value" Text="Work / day" />
+                                    <TextBlock Grid.Column="2" Classes="value" Text="Study / day" />
+                                    <TextBlock Grid.Column="3" Classes="value" Text="Break / day" />
                                 </Grid>
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
+                            </Border>
+                            <ItemsControl Classes="dashRows" ItemsSource="{Binding AverageRows}" />
+                        </StackPanel>
+                    </Border>
                 </StackPanel>
 
             </StackPanel>
