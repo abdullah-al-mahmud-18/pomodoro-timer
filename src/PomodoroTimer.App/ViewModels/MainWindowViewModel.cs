@@ -27,17 +27,19 @@ public class MainWindowViewModel : ViewModelBase
     private bool _isRunning;
     private bool _isPaused;
     private string? _errorMessage;
-    private bool _isHistoryViewActive;
+    private AppPage _currentPage = AppPage.Timer;
     private SessionCategory? _selectedCategory;
 
     public MainWindowViewModel(
         SessionRepository sessionRepository,
         NotificationService notificationService,
-        SoundService soundService)
+        SoundService soundService,
+        DashboardViewModel dashboardViewModel)
     {
         _sessionRepository = sessionRepository;
         _notificationService = notificationService;
         _soundService = soundService;
+        Dashboard = dashboardViewModel;
 
         History = new ObservableCollection<SessionItemViewModel>();
 
@@ -46,8 +48,9 @@ public class MainWindowViewModel : ViewModelBase
         ResumeCommand = new RelayCommand(Resume, () => IsPaused);
         StopCommand = new RelayCommand(Stop, () => IsRunning || IsPaused);
         DeleteSessionCommand = new RelayCommand<SessionItemViewModel>(DeleteSession);
-        ShowHistoryCommand = new RelayCommand(() => IsHistoryViewActive = true);
-        ShowTimerCommand = new RelayCommand(() => IsHistoryViewActive = false);
+        ShowHistoryCommand = new RelayCommand(() => CurrentPage = AppPage.History);
+        ShowDashboardCommand = new RelayCommand(() => CurrentPage = AppPage.Dashboard);
+        ShowTimerCommand = new RelayCommand(() => CurrentPage = AppPage.Timer);
 
         _tickTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(250) };
         _tickTimer.Tick += (_, _) => OnTick();
@@ -55,6 +58,8 @@ public class MainWindowViewModel : ViewModelBase
         ReloadHistory();
         UpdateTimeDisplay();
     }
+
+    public DashboardViewModel Dashboard { get; }
 
     public ObservableCollection<SessionItemViewModel> History { get; }
 
@@ -64,25 +69,35 @@ public class MainWindowViewModel : ViewModelBase
     public RelayCommand StopCommand { get; }
     public RelayCommand<SessionItemViewModel> DeleteSessionCommand { get; }
     public RelayCommand ShowHistoryCommand { get; }
+    public RelayCommand ShowDashboardCommand { get; }
     public RelayCommand ShowTimerCommand { get; }
 
-    public bool IsHistoryViewActive
+    public AppPage CurrentPage
     {
-        get => _isHistoryViewActive;
+        get => _currentPage;
         private set
         {
-            if (SetField(ref _isHistoryViewActive, value))
+            if (SetField(ref _currentPage, value))
             {
                 OnPropertyChanged(nameof(IsTimerViewActive));
-                if (value)
+                OnPropertyChanged(nameof(IsHistoryViewActive));
+                OnPropertyChanged(nameof(IsDashboardViewActive));
+
+                if (value == AppPage.History)
                 {
                     ReloadHistory();
+                }
+                else if (value == AppPage.Dashboard)
+                {
+                    Dashboard.Refresh();
                 }
             }
         }
     }
 
-    public bool IsTimerViewActive => !_isHistoryViewActive;
+    public bool IsTimerViewActive => _currentPage == AppPage.Timer;
+    public bool IsHistoryViewActive => _currentPage == AppPage.History;
+    public bool IsDashboardViewActive => _currentPage == AppPage.Dashboard;
 
     public string SessionName
     {

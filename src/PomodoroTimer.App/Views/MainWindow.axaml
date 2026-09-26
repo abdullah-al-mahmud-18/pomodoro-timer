@@ -12,13 +12,18 @@
         <!-- Top nav bar -->
         <Grid Grid.Row="0" ColumnDefinitions="*,Auto" Margin="0,0,0,16">
             <TextBlock Grid.Column="0" Text="Pomodoro Timer" FontSize="22" FontWeight="Bold" VerticalAlignment="Center" />
-            <Button Grid.Column="1" Content="History"
-                    Command="{Binding ShowHistoryCommand}"
-                    IsVisible="{Binding IsTimerViewActive}"
-                    Background="#2A2A3A" Foreground="White" Padding="12,6" />
+            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8"
+                        IsVisible="{Binding IsTimerViewActive}">
+                <Button Content="Dashboard"
+                        Command="{Binding ShowDashboardCommand}"
+                        Background="#2A2A3A" Foreground="White" Padding="12,6" />
+                <Button Content="History"
+                        Command="{Binding ShowHistoryCommand}"
+                        Background="#2A2A3A" Foreground="White" Padding="12,6" />
+            </StackPanel>
             <Button Grid.Column="1" Content="&#x2190; Back to timer"
                     Command="{Binding ShowTimerCommand}"
-                    IsVisible="{Binding IsHistoryViewActive}"
+                    IsVisible="{Binding !IsTimerViewActive}"
                     Background="#2A2A3A" Foreground="White" Padding="12,6" />
         </Grid>
 
@@ -139,6 +144,61 @@
                 </ListBox.ItemTemplate>
             </ListBox>
         </DockPanel>
+
+        <!-- DASHBOARD VIEW -->
+        <ScrollViewer Grid.Row="1" IsVisible="{Binding IsDashboardViewActive}">
+            <StackPanel DataContext="{Binding Dashboard}" Spacing="24" MaxWidth="700" HorizontalAlignment="Center">
+
+                <StackPanel Spacing="8">
+                    <TextBlock Text="Today" FontSize="18" FontWeight="Bold" />
+                    <ItemsControl ItemsSource="{Binding TodayRows}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="vm:DashboardRowViewModel">
+                                <Grid ColumnDefinitions="1.2*,*,*,*" Margin="0,4">
+                                    <TextBlock Grid.Column="0" Text="{Binding Label}" />
+                                    <TextBlock Grid.Column="1" Text="{Binding WorkDisplay, StringFormat='Work: {0}'}" />
+                                    <TextBlock Grid.Column="2" Text="{Binding StudyDisplay, StringFormat='Study: {0}'}" />
+                                    <TextBlock Grid.Column="3" Text="{Binding BreakDisplay, StringFormat='Break: {0}'}" />
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+
+                <StackPanel Spacing="8">
+                    <TextBlock Text="Totals" FontSize="18" FontWeight="Bold" />
+                    <ItemsControl ItemsSource="{Binding TotalRows}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="vm:DashboardRowViewModel">
+                                <Grid ColumnDefinitions="1.2*,*,*,*" Margin="0,4">
+                                    <TextBlock Grid.Column="0" Text="{Binding Label}" />
+                                    <TextBlock Grid.Column="1" Text="{Binding WorkDisplay, StringFormat='Work: {0}'}" />
+                                    <TextBlock Grid.Column="2" Text="{Binding StudyDisplay, StringFormat='Study: {0}'}" />
+                                    <TextBlock Grid.Column="3" Text="{Binding BreakDisplay, StringFormat='Break: {0}'}" />
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+
+                <StackPanel Spacing="8">
+                    <TextBlock Text="Daily averages" FontSize="18" FontWeight="Bold" />
+                    <ItemsControl ItemsSource="{Binding AverageRows}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="vm:DashboardRowViewModel">
+                                <Grid ColumnDefinitions="1.2*,*,*,*" Margin="0,4">
+                                    <TextBlock Grid.Column="0" Text="{Binding Label}" />
+                                    <TextBlock Grid.Column="1" Text="{Binding WorkDisplay, StringFormat='Work: {0}'}" />
+                                    <TextBlock Grid.Column="2" Text="{Binding StudyDisplay, StringFormat='Study: {0}'}" />
+                                    <TextBlock Grid.Column="3" Text="{Binding BreakDisplay, StringFormat='Break: {0}'}" />
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+
+            </StackPanel>
+        </ScrollViewer>
 
     </Grid>
 

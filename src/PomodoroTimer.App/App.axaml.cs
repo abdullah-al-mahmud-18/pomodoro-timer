@@ -7,6 +7,7 @@ using PomodoroTimer.App.Services;
 using PomodoroTimer.App.ViewModels;
 using PomodoroTimer.App.Views;
 using PomodoroTimer.Core.Data;
+using PomodoroTimer.Core.Services;
 
 namespace PomodoroTimer.App;
 
@@ -28,6 +29,8 @@ public class App : Application
 
             var database = new Database(dbPath);
             var sessionRepository = new SessionRepository(database);
+            var dashboardService = new DashboardService();
+            var dashboardViewModel = new DashboardViewModel(sessionRepository, dashboardService);
 
             var notificationManager = NotificationManagerFactory.TryCreate();
             var notificationService = new NotificationService(notificationManager);
@@ -35,7 +38,7 @@ public class App : Application
 
             desktop.MainWindow = new MainWindow
             {
-                DataContext = new MainWindowViewModel(sessionRepository, notificationService, soundService)
+                DataContext = new MainWindowViewModel(sessionRepository, notificationService, soundService, dashboardViewModel)
             };
 
             desktop.ShutdownRequested += (_, _) =>
