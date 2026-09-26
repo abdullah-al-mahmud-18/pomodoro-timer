@@ -37,6 +37,22 @@
                                  IsEnabled="{Binding IsConfiguring}" />
                 </StackPanel>
 
+                <!-- Category (Work / Study / Break) -->
+                <StackPanel Spacing="4">
+                    <TextBlock Text="Mode" FontSize="12" Foreground="Gray" />
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <RadioButton Content="Work" GroupName="Category"
+                                     IsChecked="{Binding IsWorkCategory}"
+                                     IsEnabled="{Binding IsConfiguring}" />
+                        <RadioButton Content="Study" GroupName="Category"
+                                     IsChecked="{Binding IsStudyCategory}"
+                                     IsEnabled="{Binding IsConfiguring}" />
+                        <RadioButton Content="Break" GroupName="Category"
+                                     IsChecked="{Binding IsBreakCategory}"
+                                     IsEnabled="{Binding IsConfiguring}" />
+                    </StackPanel>
+                </StackPanel>
+
                 <!-- Name -->
                 <StackPanel Spacing="4">
                     <TextBlock Text="Name" FontSize="12" Foreground="Gray" />
@@ -108,6 +124,8 @@
                                         Padding="6,2" VerticalAlignment="Top" />
                                 <TextBlock Grid.Row="1" Grid.Column="0" FontSize="11" Foreground="Gray">
                                     <Run Text="{Binding ModeDisplay}" />
+                                    <Run Text=" · " />
+                                    <Run Text="{Binding CategoryDisplay}" />
                                     <Run Text=" · " />
                                     <Run Text="{Binding DurationDisplay}" />
                                     <Run Text=" · " />

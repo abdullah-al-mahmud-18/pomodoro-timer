@@ -28,6 +28,7 @@ public class MainWindowViewModel : ViewModelBase
     private bool _isPaused;
     private string? _errorMessage;
     private bool _isHistoryViewActive;
+    private SessionCategory? _selectedCategory;
 
     public MainWindowViewModel(
         SessionRepository sessionRepository,
@@ -107,6 +108,38 @@ public class MainWindowViewModel : ViewModelBase
     {
         get => !_isTimerMode;
         set => IsTimerMode = !value;
+    }
+
+    public SessionCategory? SelectedCategory
+    {
+        get => _selectedCategory;
+        set
+        {
+            if (SetField(ref _selectedCategory, value))
+            {
+                OnPropertyChanged(nameof(IsWorkCategory));
+                OnPropertyChanged(nameof(IsStudyCategory));
+                OnPropertyChanged(nameof(IsBreakCategory));
+            }
+        }
+    }
+
+    public bool IsWorkCategory
+    {
+        get => _selectedCategory == SessionCategory.Work;
+        set { if (value) SelectedCategory = SessionCategory.Work; }
+    }
+
+    public bool IsStudyCategory
+    {
+        get => _selectedCategory == SessionCategory.Study;
+        set { if (value) SelectedCategory = SessionCategory.Study; }
+    }
+
+    public bool IsBreakCategory
+    {
+        get => _selectedCategory == SessionCategory.Break;
+        set { if (value) SelectedCategory = SessionCategory.Break; }
     }
 
     public int Hours
@@ -206,6 +239,12 @@ public class MainWindowViewModel : ViewModelBase
     {
         ErrorMessage = null;
 
+        if (SelectedCategory is not { } category)
+        {
+            ErrorMessage = "Select a mode (Work, Study, or Break) before starting.";
+            return;
+        }
+
         var name = string.IsNullOrWhiteSpace(SessionName) ? DefaultName() : SessionName.Trim();
         var mode = IsTimerMode ? TimerMode.Timer : TimerMode.Stopwatch;
 
@@ -217,7 +256,7 @@ public class MainWindowViewModel : ViewModelBase
 
         _engine = new TimerEngine();
         _engine.Completed += OnEngineCompleted;
-        _engine.Start(name, mode, mode == TimerMode.Timer ? CustomDuration : null);
+        _engine.Start(name, mode, category, mode == TimerMode.Timer ? CustomDuration : null);
 
         IsRunning = true;
         IsPaused = false;

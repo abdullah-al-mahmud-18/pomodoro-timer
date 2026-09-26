@@ -14,6 +14,7 @@ public class SessionItemViewModel
     public int Id => Session.Id;
     public string Name => Session.Name;
     public string ModeDisplay => Session.Mode == TimerMode.Timer ? "Timer" : "Stopwatch";
+    public string CategoryDisplay => Session.Category.ToString();
     public string DurationDisplay => FormatDuration(Session.ActualDurationSeconds);
     public string StatusDisplay => Session.Completed ? "Completed" : "Stopped early";
     public string StartedAtDisplay => Session.StartedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm");

@@ -17,7 +17,7 @@ public class SessionRepository
         using var connection = _database.OpenConnection();
         using var command = connection.CreateCommand();
         command.CommandText = """
-            SELECT Id, Name, Mode, PlannedDurationSeconds, ActualDurationSeconds, StartedAt, EndedAt, Completed
+            SELECT Id, Name, Mode, PlannedDurationSeconds, ActualDurationSeconds, StartedAt, EndedAt, Completed, Category
             FROM Sessions
             ORDER BY StartedAt DESC;
             """;
@@ -36,8 +36,8 @@ public class SessionRepository
         using var connection = _database.OpenConnection();
         using var command = connection.CreateCommand();
         command.CommandText = """
-            INSERT INTO Sessions (Name, Mode, PlannedDurationSeconds, ActualDurationSeconds, StartedAt, EndedAt, Completed)
-            VALUES ($name, $mode, $planned, $actual, $startedAt, $endedAt, $completed);
+            INSERT INTO Sessions (Name, Mode, PlannedDurationSeconds, ActualDurationSeconds, StartedAt, EndedAt, Completed, Category)
+            VALUES ($name, $mode, $planned, $actual, $startedAt, $endedAt, $completed, $category);
             SELECT last_insert_rowid();
             """;
         command.Parameters.AddWithValue("$name", session.Name);
@@ -47,6 +47,7 @@ public class SessionRepository
         command.Parameters.AddWithValue("$startedAt", session.StartedAt.ToString("O"));
         command.Parameters.AddWithValue("$endedAt", session.EndedAt.ToString("O"));
         command.Parameters.AddWithValue("$completed", session.Completed ? 1 : 0);
+        command.Parameters.AddWithValue("$category", session.Category.ToString());
 
         var id = (long)command.ExecuteScalar()!;
         session.Id = (int)id;
@@ -73,7 +74,8 @@ public class SessionRepository
             ActualDurationSeconds = reader.GetInt32(4),
             StartedAt = DateTimeOffset.Parse(reader.GetString(5)),
             EndedAt = DateTimeOffset.Parse(reader.GetString(6)),
-            Completed = reader.GetInt32(7) != 0
+            Completed = reader.GetInt32(7) != 0,
+            Category = Enum.Parse<SessionCategory>(reader.GetString(8))
         };
     }
 }

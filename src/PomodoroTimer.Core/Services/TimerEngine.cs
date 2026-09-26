@@ -17,6 +17,7 @@ public class TimerEngine
 
     public string Name { get; private set; } = string.Empty;
     public TimerMode Mode { get; private set; }
+    public SessionCategory Category { get; private set; }
     public TimeSpan? PlannedDuration { get; private set; }
     public TimerState State { get; private set; } = TimerState.Idle;
 
@@ -29,7 +30,7 @@ public class TimerEngine
 
     public DateTimeOffset StartedAt => _startedAt;
 
-    public void Start(string name, TimerMode mode, TimeSpan? plannedDuration)
+    public void Start(string name, TimerMode mode, SessionCategory category, TimeSpan? plannedDuration)
     {
         if (mode == TimerMode.Timer && (plannedDuration is null || plannedDuration.Value <= TimeSpan.Zero))
         {
@@ -38,6 +39,7 @@ public class TimerEngine
 
         Name = name;
         Mode = mode;
+        Category = category;
         PlannedDuration = mode == TimerMode.Timer ? plannedDuration : null;
         _accumulatedBeforePause = TimeSpan.Zero;
         _startedAt = _now();
@@ -138,6 +140,7 @@ public class TimerEngine
         {
             Name = Name,
             Mode = Mode,
+            Category = Category,
             PlannedDurationSeconds = PlannedDuration is null ? null : (int)PlannedDuration.Value.TotalSeconds,
             ActualDurationSeconds = (int)Elapsed.TotalSeconds,
             StartedAt = _startedAt,

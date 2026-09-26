@@ -5,6 +5,7 @@ public class Session
     public int Id { get; set; }
     public required string Name { get; set; }
     public required TimerMode Mode { get; set; }
+    public required SessionCategory Category { get; set; }
 
     /// <summary>Null for stopwatch sessions (no planned duration).</summary>
     public int? PlannedDurationSeconds { get; set; }

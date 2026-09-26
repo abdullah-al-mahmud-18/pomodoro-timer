@@ -21,7 +21,7 @@ public class TimerEngineTests
         var completedRaised = false;
         engine.Completed += (_, _) => completedRaised = true;
 
-        engine.Start("Deep work", TimerMode.Timer, TimeSpan.FromMinutes(25));
+        engine.Start("Deep work", TimerMode.Timer, SessionCategory.Work, TimeSpan.FromMinutes(25));
 
         clock.Advance(TimeSpan.FromMinutes(10));
         engine.Tick();
@@ -41,7 +41,7 @@ public class TimerEngineTests
     {
         var clock = new FakeClock();
         var engine = new TimerEngine(clock.Get);
-        engine.Start("Focus", TimerMode.Timer, TimeSpan.FromMinutes(10));
+        engine.Start("Focus", TimerMode.Timer, SessionCategory.Work, TimeSpan.FromMinutes(10));
 
         clock.Advance(TimeSpan.FromMinutes(2));
         engine.Pause();
@@ -63,7 +63,7 @@ public class TimerEngineTests
     {
         var clock = new FakeClock();
         var engine = new TimerEngine(clock.Get);
-        engine.Start("Reading", TimerMode.Stopwatch, null);
+        engine.Start("Reading", TimerMode.Stopwatch, SessionCategory.Break, null);
 
         clock.Advance(TimeSpan.FromHours(2));
         engine.Tick();
@@ -78,7 +78,7 @@ public class TimerEngineTests
     {
         var clock = new FakeClock();
         var engine = new TimerEngine(clock.Get);
-        engine.Start("Focus", TimerMode.Timer, TimeSpan.FromMinutes(25));
+        engine.Start("Focus", TimerMode.Timer, SessionCategory.Work, TimeSpan.FromMinutes(25));
 
         clock.Advance(TimeSpan.FromMinutes(5));
         engine.Stop();
@@ -94,7 +94,7 @@ public class TimerEngineTests
     {
         var clock = new FakeClock();
         var engine = new TimerEngine(clock.Get);
-        engine.Start("Reading", TimerMode.Stopwatch, null);
+        engine.Start("Reading", TimerMode.Stopwatch, SessionCategory.Break, null);
 
         clock.Advance(TimeSpan.FromMinutes(45));
         engine.Stop();
@@ -109,7 +109,7 @@ public class TimerEngineTests
     public void Timer_WithoutDuration_Throws()
     {
         var engine = new TimerEngine();
-        Assert.Throws<ArgumentException>(() => engine.Start("Bad", TimerMode.Timer, null));
+        Assert.Throws<ArgumentException>(() => engine.Start("Bad", TimerMode.Timer, SessionCategory.Work, null));
     }
 
     [Fact]
@@ -117,11 +117,25 @@ public class TimerEngineTests
     {
         var clock = new FakeClock();
         var engine = new TimerEngine(clock.Get);
-        engine.Start("Focus", TimerMode.Timer, TimeSpan.FromMinutes(5));
+        engine.Start("Focus", TimerMode.Timer, SessionCategory.Work, TimeSpan.FromMinutes(5));
 
         clock.Advance(TimeSpan.FromMinutes(50));
 
         Assert.Equal(TimeSpan.FromMinutes(5), engine.Elapsed);
         Assert.Equal(TimeSpan.Zero, engine.Remaining);
+    }
+
+    [Fact]
+    public void ToSession_IncludesCategory()
+    {
+        var clock = new FakeClock();
+        var engine = new TimerEngine(clock.Get);
+        engine.Start("Algebra", TimerMode.Timer, SessionCategory.Study, TimeSpan.FromMinutes(30));
+
+        clock.Advance(TimeSpan.FromMinutes(30));
+        engine.Tick();
+
+        var session = engine.ToSession(clock.Now);
+        Assert.Equal(SessionCategory.Study, session.Category);
     }
 }

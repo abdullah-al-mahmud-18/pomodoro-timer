@@ -25,6 +25,7 @@ public class RepositoryTests : IDisposable
         {
             Name = "Deep work",
             Mode = TimerMode.Timer,
+            Category = SessionCategory.Work,
             PlannedDurationSeconds = 1500,
             ActualDurationSeconds = 1500,
             StartedAt = now.AddMinutes(-25),
@@ -37,6 +38,7 @@ public class RepositoryTests : IDisposable
         Assert.Single(all);
         Assert.Equal("Deep work", all[0].Name);
         Assert.True(all[0].Completed);
+        Assert.Equal(SessionCategory.Work, all[0].Category);
     }
 
     [Fact]
@@ -49,6 +51,7 @@ public class RepositoryTests : IDisposable
         {
             Name = "Reading",
             Mode = TimerMode.Stopwatch,
+            Category = SessionCategory.Break,
             PlannedDurationSeconds = null,
             ActualDurationSeconds = 600,
             StartedAt = now.AddMinutes(-10),
@@ -59,6 +62,38 @@ public class RepositoryTests : IDisposable
         repo.Delete(session.Id);
 
         Assert.Empty(repo.GetAll());
+    }
+
+    [Fact]
+    public void Database_MigratesExistingSessionsTable_WithoutCategoryColumn()
+    {
+        // Simulate a pre-Category database by dropping the column the fresh Database() ctor just added.
+        using (var connection = _database.OpenConnection())
+        using (var command = connection.CreateCommand())
+        {
+            command.CommandText = """
+                CREATE TABLE Sessions_Old (
+                    Id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    Name TEXT NOT NULL,
+                    Mode TEXT NOT NULL,
+                    PlannedDurationSeconds INTEGER NULL,
+                    ActualDurationSeconds INTEGER NOT NULL,
+                    StartedAt TEXT NOT NULL,
+                    EndedAt TEXT NOT NULL,
+                    Completed INTEGER NOT NULL
+                );
+                DROP TABLE Sessions;
+                ALTER TABLE Sessions_Old RENAME TO Sessions;
+                """;
+            command.ExecuteNonQuery();
+        }
+
+        // Re-running Database's migration logic against the same file should add Category back without error.
+        var migrated = new Database(_dbPath);
+        var repo = new SessionRepository(migrated);
+
+        var all = repo.GetAll();
+        Assert.Empty(all);
     }
 
     public void Dispose()

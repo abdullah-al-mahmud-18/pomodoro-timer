@@ -54,5 +54,21 @@ public class Database
             CREATE INDEX IF NOT EXISTS IX_Sessions_StartedAt ON Sessions (StartedAt DESC);
             """;
         command.ExecuteNonQuery();
+
+        AddCategoryColumnIfMissing(connection);
+    }
+
+    private static void AddCategoryColumnIfMissing(SqliteConnection connection)
+    {
+        using var checkCommand = connection.CreateCommand();
+        checkCommand.CommandText = "SELECT COUNT(*) FROM pragma_table_info('Sessions') WHERE name = 'Category';";
+        var columnExists = (long)checkCommand.ExecuteScalar()! > 0;
+
+        if (!columnExists)
+        {
+            using var alterCommand = connection.CreateCommand();
+            alterCommand.CommandText = "ALTER TABLE Sessions ADD COLUMN Category TEXT NOT NULL DEFAULT 'Work';";
+            alterCommand.ExecuteNonQuery();
+        }
     }
 }
