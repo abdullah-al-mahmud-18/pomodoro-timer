@@ -40,14 +40,6 @@ public class Database
         using var connection = OpenConnection();
         using var command = connection.CreateCommand();
         command.CommandText = """
-            CREATE TABLE IF NOT EXISTS Presets (
-                Id INTEGER PRIMARY KEY AUTOINCREMENT,
-                Name TEXT NOT NULL,
-                Mode TEXT NOT NULL,
-                DurationSeconds INTEGER NULL,
-                CreatedAt TEXT NOT NULL
-            );
-
             CREATE TABLE IF NOT EXISTS Sessions (
                 Id INTEGER PRIMARY KEY AUTOINCREMENT,
                 Name TEXT NOT NULL,

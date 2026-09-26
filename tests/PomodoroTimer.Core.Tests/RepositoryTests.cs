@@ -16,32 +16,6 @@ public class RepositoryTests : IDisposable
     }
 
     [Fact]
-    public void PresetRepository_AddAndGetAll_RoundTrips()
-    {
-        var repo = new PresetRepository(_database);
-
-        repo.Add("Deep work", TimerMode.Timer, 3000);
-        repo.Add("Free reading", TimerMode.Stopwatch, null);
-
-        var all = repo.GetAll();
-
-        Assert.Equal(2, all.Count);
-        Assert.Contains(all, p => p.Name == "Deep work" && p.DurationSeconds == 3000);
-        Assert.Contains(all, p => p.Name == "Free reading" && p.DurationSeconds == null);
-    }
-
-    [Fact]
-    public void PresetRepository_Delete_Removes()
-    {
-        var repo = new PresetRepository(_database);
-        var preset = repo.Add("Short break", TimerMode.Timer, 300);
-
-        repo.Delete(preset.Id);
-
-        Assert.Empty(repo.GetAll());
-    }
-
-    [Fact]
     public void SessionRepository_AddAndGetAll_RoundTrips()
     {
         var repo = new SessionRepository(_database);

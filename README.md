@@ -9,7 +9,6 @@ A cross-platform Pomodoro / timer & stopwatch desktop app built with Avalonia UI
 - **Timer** — counts down from a duration you set, with a live progress bar.
 - **Stopwatch** — counts up with no fixed duration.
 - **Custom durations** — set any hours/minutes/seconds combination, with a name, for either mode.
-- **Presets** — save a named timer/stopwatch configuration and reapply it later (e.g. "Deep work – 50 min", "Short break – 5 min").
 - **History** — every completed or stopped session is logged with name, mode, duration, and timestamps; entries can be deleted individually.
 - **Completion notification** — when a timer reaches zero, you get a native OS toast notification and a completion sound. (Stopwatch sessions end via Stop, since counting up has no natural completion point.)
 
@@ -40,8 +39,8 @@ This also means the app multi-targets two TFMs:
 PomodoroTimer.slnx
 src/
   PomodoroTimer.Core/       UI-agnostic domain logic (testable in isolation)
-    Models/                 Preset, Session, TimerMode
-    Data/                   Database, PresetRepository, SessionRepository (Microsoft.Data.Sqlite)
+    Models/                 Session, TimerMode
+    Data/                   Database, SessionRepository (Microsoft.Data.Sqlite)
     Services/               TimerEngine — the countdown/count-up/pause/resume/complete state machine
   PomodoroTimer.App/        Avalonia UI
     ViewModels/              MainWindowViewModel and friends (plain INotifyPropertyChanged, no framework)
@@ -56,8 +55,6 @@ tests/
 
 ## Data model
 
-**Presets** (`Presets` table): `Id`, `Name`, `Mode` (`Timer`/`Stopwatch`), `DurationSeconds` (null for stopwatch), `CreatedAt`.
-
 **Sessions** (`Sessions` table, the history/reports): `Id`, `Name`, `Mode`, `PlannedDurationSeconds` (null for stopwatch), `ActualDurationSeconds`, `StartedAt`, `EndedAt`, `Completed`.
 
 The database file lives at:
@@ -68,7 +65,6 @@ The database file lives at:
 ## Known limitations
 
 - No installer/deployment automation (per CLAUDE.md's non-goals) — publish produces a runnable folder/executable only.
-- The `Tmds.DBus` / `Tmds.DBus.Protocol` packages pulled in transitively by the Linux notification backend (`DesktopNotifications.FreeDesktop`) carry an unfixed NuGet security advisory as of writing (no patched version is published upstream). This only affects the Linux D-Bus notification code path.
 
 ## Building, running, and publishing
 

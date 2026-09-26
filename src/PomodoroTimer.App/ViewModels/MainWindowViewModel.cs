@@ -1,6 +1,5 @@
 using System;
 using System.Collections.ObjectModel;
-using System.Linq;
 using Avalonia.Threading;
 using PomodoroTimer.App.Services;
 using PomodoroTimer.Core.Data;
@@ -11,7 +10,6 @@ namespace PomodoroTimer.App.ViewModels;
 
 public class MainWindowViewModel : ViewModelBase
 {
-    private readonly PresetRepository _presetRepository;
     private readonly SessionRepository _sessionRepository;
     private readonly NotificationService _notificationService;
     private readonly SoundService _soundService;
@@ -29,61 +27,43 @@ public class MainWindowViewModel : ViewModelBase
     private bool _isRunning;
     private bool _isPaused;
     private string? _errorMessage;
-    private PresetItemViewModel? _selectedPreset;
 
     public MainWindowViewModel(
-        PresetRepository presetRepository,
         SessionRepository sessionRepository,
         NotificationService notificationService,
         SoundService soundService)
     {
-        _presetRepository = presetRepository;
         _sessionRepository = sessionRepository;
         _notificationService = notificationService;
         _soundService = soundService;
 
-        Presets = new ObservableCollection<PresetItemViewModel>();
         History = new ObservableCollection<SessionItemViewModel>();
 
         StartCommand = new RelayCommand(Start, () => !IsRunning && !IsPaused);
         PauseCommand = new RelayCommand(Pause, () => IsRunning && IsTimerMode);
         ResumeCommand = new RelayCommand(Resume, () => IsPaused);
         StopCommand = new RelayCommand(Stop, () => IsRunning || IsPaused);
-        SavePresetCommand = new RelayCommand(SaveCurrentAsPreset, () => !string.IsNullOrWhiteSpace(SessionName));
-        ApplyPresetCommand = new RelayCommand(ApplySelectedPreset, () => SelectedPreset is not null && !IsRunning && !IsPaused);
-        DeletePresetCommand = new RelayCommand(DeleteSelectedPreset, () => SelectedPreset is not null);
         DeleteSessionCommand = new RelayCommand<SessionItemViewModel>(DeleteSession);
 
         _tickTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(250) };
         _tickTimer.Tick += (_, _) => OnTick();
 
-        ReloadPresets();
         ReloadHistory();
         UpdateTimeDisplay();
     }
 
-    public ObservableCollection<PresetItemViewModel> Presets { get; }
     public ObservableCollection<SessionItemViewModel> History { get; }
 
     public RelayCommand StartCommand { get; }
     public RelayCommand PauseCommand { get; }
     public RelayCommand ResumeCommand { get; }
     public RelayCommand StopCommand { get; }
-    public RelayCommand SavePresetCommand { get; }
-    public RelayCommand ApplyPresetCommand { get; }
-    public RelayCommand DeletePresetCommand { get; }
     public RelayCommand<SessionItemViewModel> DeleteSessionCommand { get; }
 
     public string SessionName
     {
         get => _sessionName;
-        set
-        {
-            if (SetField(ref _sessionName, value))
-            {
-                SavePresetCommand.RaiseCanExecuteChanged();
-            }
-        }
+        set => SetField(ref _sessionName, value);
     }
 
     public bool IsTimerMode
@@ -188,19 +168,6 @@ public class MainWindowViewModel : ViewModelBase
         private set => SetField(ref _errorMessage, value);
     }
 
-    public PresetItemViewModel? SelectedPreset
-    {
-        get => _selectedPreset;
-        set
-        {
-            if (SetField(ref _selectedPreset, value))
-            {
-                ApplyPresetCommand.RaiseCanExecuteChanged();
-                DeletePresetCommand.RaiseCanExecuteChanged();
-            }
-        }
-    }
-
     private void RaiseAllCommandStates()
     {
         OnPropertyChanged(nameof(IsConfiguring));
@@ -208,7 +175,6 @@ public class MainWindowViewModel : ViewModelBase
         PauseCommand.RaiseCanExecuteChanged();
         ResumeCommand.RaiseCanExecuteChanged();
         StopCommand.RaiseCanExecuteChanged();
-        ApplyPresetCommand.RaiseCanExecuteChanged();
     }
 
     private TimeSpan CustomDuration => new(_hours, _minutes, _seconds);
@@ -346,59 +312,6 @@ public class MainWindowViewModel : ViewModelBase
             : $"{span.Minutes:D2}:{span.Seconds:D2}";
     }
 
-    private void SaveCurrentAsPreset()
-    {
-        var name = SessionName.Trim();
-        if (string.IsNullOrWhiteSpace(name))
-        {
-            return;
-        }
-
-        var mode = IsTimerMode ? TimerMode.Timer : TimerMode.Stopwatch;
-        int? duration = mode == TimerMode.Timer ? (int)CustomDuration.TotalSeconds : null;
-
-        if (mode == TimerMode.Timer && duration is null or <= 0)
-        {
-            ErrorMessage = "Set a duration greater than zero to save a timer preset.";
-            return;
-        }
-
-        _presetRepository.Add(name, mode, duration);
-        ReloadPresets();
-    }
-
-    private void ApplySelectedPreset()
-    {
-        if (SelectedPreset is null)
-        {
-            return;
-        }
-
-        var preset = SelectedPreset.Preset;
-        SessionName = preset.Name;
-        IsTimerMode = preset.Mode == TimerMode.Timer;
-
-        if (preset.Mode == TimerMode.Timer && preset.DurationSeconds is { } totalSeconds)
-        {
-            var span = TimeSpan.FromSeconds(totalSeconds);
-            Hours = span.Hours;
-            Minutes = span.Minutes;
-            Seconds = span.Seconds;
-        }
-    }
-
-    private void DeleteSelectedPreset()
-    {
-        if (SelectedPreset is null)
-        {
-            return;
-        }
-
-        _presetRepository.Delete(SelectedPreset.Id);
-        SelectedPreset = null;
-        ReloadPresets();
-    }
-
     private void DeleteSession(SessionItemViewModel? item)
     {
         if (item is null)
@@ -408,15 +321,6 @@ public class MainWindowViewModel : ViewModelBase
 
         _sessionRepository.Delete(item.Id);
         ReloadHistory();
-    }
-
-    private void ReloadPresets()
-    {
-        Presets.Clear();
-        foreach (var preset in _presetRepository.GetAll())
-        {
-            Presets.Add(new PresetItemViewModel(preset));
-        }
     }
 
     private void ReloadHistory()

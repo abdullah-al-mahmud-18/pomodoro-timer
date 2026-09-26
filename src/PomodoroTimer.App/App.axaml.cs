@@ -27,7 +27,6 @@ public class App : Application
                 "pomodoro.db");
 
             var database = new Database(dbPath);
-            var presetRepository = new PresetRepository(database);
             var sessionRepository = new SessionRepository(database);
 
             var notificationManager = NotificationManagerFactory.TryCreate();
@@ -36,7 +35,7 @@ public class App : Application
 
             desktop.MainWindow = new MainWindow
             {
-                DataContext = new MainWindowViewModel(presetRepository, sessionRepository, notificationService, soundService)
+                DataContext = new MainWindowViewModel(sessionRepository, notificationService, soundService)
             };
 
             desktop.ShutdownRequested += (_, _) =>

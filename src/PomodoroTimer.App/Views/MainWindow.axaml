@@ -74,32 +74,6 @@
                     <Button Content="Pause" Command="{Binding PauseCommand}" IsVisible="{Binding IsTimerMode}" />
                     <Button Content="Resume" Command="{Binding ResumeCommand}" />
                     <Button Content="Stop" Command="{Binding StopCommand}" />
-                    <Button Content="Save as preset" Command="{Binding SavePresetCommand}" />
-                </StackPanel>
-
-                <!-- Presets -->
-                <StackPanel Spacing="6">
-                    <TextBlock Text="Presets" FontSize="16" FontWeight="SemiBold" />
-                    <ListBox ItemsSource="{Binding Presets}"
-                             SelectedItem="{Binding SelectedPreset}"
-                             MaxHeight="220">
-                        <ListBox.ItemTemplate>
-                            <DataTemplate x:DataType="vm:PresetItemViewModel">
-                                <Grid ColumnDefinitions="*,Auto">
-                                    <StackPanel Grid.Column="0">
-                                        <TextBlock Text="{Binding Name}" FontWeight="Medium" />
-                                        <TextBlock Text="{Binding DurationDisplay}" FontSize="11" Foreground="Gray" />
-                                    </StackPanel>
-                                    <TextBlock Grid.Column="1" Text="{Binding ModeDisplay}"
-                                               FontSize="11" Foreground="Gray" VerticalAlignment="Center" />
-                                </Grid>
-                            </DataTemplate>
-                        </ListBox.ItemTemplate>
-                    </ListBox>
-                    <StackPanel Orientation="Horizontal" Spacing="8">
-                        <Button Content="Apply" Command="{Binding ApplyPresetCommand}" />
-                        <Button Content="Delete" Command="{Binding DeletePresetCommand}" />
-                    </StackPanel>
                 </StackPanel>
 
             </StackPanel>
