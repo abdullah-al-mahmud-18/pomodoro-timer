@@ -27,6 +27,7 @@ public class MainWindowViewModel : ViewModelBase
     private bool _isRunning;
     private bool _isPaused;
     private string? _errorMessage;
+    private bool _isHistoryViewActive;
 
     public MainWindowViewModel(
         SessionRepository sessionRepository,
@@ -44,6 +45,8 @@ public class MainWindowViewModel : ViewModelBase
         ResumeCommand = new RelayCommand(Resume, () => IsPaused);
         StopCommand = new RelayCommand(Stop, () => IsRunning || IsPaused);
         DeleteSessionCommand = new RelayCommand<SessionItemViewModel>(DeleteSession);
+        ShowHistoryCommand = new RelayCommand(() => IsHistoryViewActive = true);
+        ShowTimerCommand = new RelayCommand(() => IsHistoryViewActive = false);
 
         _tickTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(250) };
         _tickTimer.Tick += (_, _) => OnTick();
@@ -59,6 +62,26 @@ public class MainWindowViewModel : ViewModelBase
     public RelayCommand ResumeCommand { get; }
     public RelayCommand StopCommand { get; }
     public RelayCommand<SessionItemViewModel> DeleteSessionCommand { get; }
+    public RelayCommand ShowHistoryCommand { get; }
+    public RelayCommand ShowTimerCommand { get; }
+
+    public bool IsHistoryViewActive
+    {
+        get => _isHistoryViewActive;
+        private set
+        {
+            if (SetField(ref _isHistoryViewActive, value))
+            {
+                OnPropertyChanged(nameof(IsTimerViewActive));
+                if (value)
+                {
+                    ReloadHistory();
+                }
+            }
+        }
+    }
+
+    public bool IsTimerViewActive => !_isHistoryViewActive;
 
     public string SessionName
     {

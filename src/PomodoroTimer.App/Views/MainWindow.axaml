@@ -7,13 +7,25 @@
         Width="980" Height="640"
         MinWidth="760" MinHeight="520">
 
-    <Grid ColumnDefinitions="1.1*,2,1*" Margin="16">
+    <Grid Margin="16" RowDefinitions="Auto,*">
 
-        <!-- LEFT: Timer / Stopwatch controls -->
-        <ScrollViewer Grid.Column="0">
-            <StackPanel Spacing="16">
+        <!-- Top nav bar -->
+        <Grid Grid.Row="0" ColumnDefinitions="*,Auto" Margin="0,0,0,16">
+            <TextBlock Grid.Column="0" Text="Pomodoro Timer" FontSize="22" FontWeight="Bold" VerticalAlignment="Center" />
+            <Button Grid.Column="1" Content="History"
+                    Command="{Binding ShowHistoryCommand}"
+                    IsVisible="{Binding IsTimerViewActive}"
+                    Background="#2A2A3A" Foreground="White" Padding="12,6" />
+            <Button Grid.Column="1" Content="&#x2190; Back to timer"
+                    Command="{Binding ShowTimerCommand}"
+                    IsVisible="{Binding IsHistoryViewActive}"
+                    Background="#2A2A3A" Foreground="White" Padding="12,6" />
+        </Grid>
 
-                <TextBlock Text="Pomodoro Timer" FontSize="22" FontWeight="Bold" />
+        <!-- TIMER / STOPWATCH VIEW -->
+        <ScrollViewer Grid.Row="1" IsVisible="{Binding IsTimerViewActive}"
+                      HorizontalScrollBarVisibility="Disabled">
+            <StackPanel Spacing="16" MaxWidth="420" HorizontalAlignment="Center">
 
                 <!-- Mode toggle -->
                 <StackPanel Orientation="Horizontal" Spacing="8">
@@ -79,11 +91,8 @@
             </StackPanel>
         </ScrollViewer>
 
-        <!-- Divider -->
-        <Rectangle Grid.Column="1" Fill="#33000000" Width="1" HorizontalAlignment="Center" />
-
-        <!-- RIGHT: History -->
-        <DockPanel Grid.Column="2">
+        <!-- HISTORY VIEW -->
+        <DockPanel Grid.Row="1" IsVisible="{Binding IsHistoryViewActive}">
             <TextBlock DockPanel.Dock="Top" Text="History" FontSize="18" FontWeight="Bold" Margin="0,0,0,12" />
 
             <ListBox ItemsSource="{Binding History}">
