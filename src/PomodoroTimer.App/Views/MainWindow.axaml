@@ -4,6 +4,7 @@
         x:Class="PomodoroTimer.App.Views.MainWindow"
         x:DataType="vm:MainWindowViewModel"
         Title="Pomodoro Timer"
+        Icon="avares://PomodoroTimer.App/Assets/hourglass.png"
         Width="980" Height="640"
         MinWidth="760" MinHeight="520">
 

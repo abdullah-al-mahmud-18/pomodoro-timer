@@ -9,6 +9,7 @@
     <Nullable>enable</Nullable>
     <BuiltInComInteropSupport>true</BuiltInComInteropSupport>
     <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon>Assets\app.ico</ApplicationIcon>
     <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
     <RootNamespace>PomodoroTimer.App</RootNamespace>
     <RuntimeIdentifiers>win-x64;linux-x64</RuntimeIdentifiers>
@@ -50,6 +51,7 @@
 
   <ItemGroup>
     <EmbeddedResource Include="Assets\complete.wav" LogicalName="PomodoroTimer.App.Assets.complete.wav" />
+    <AvaloniaResource Include="Assets\hourglass.png" />
   </ItemGroup>
 
 </Project>
