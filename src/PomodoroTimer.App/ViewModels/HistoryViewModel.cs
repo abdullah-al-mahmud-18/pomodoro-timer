@@ -50,25 +50,25 @@ public class HistoryViewModel : ViewModelBase
         // Value is the session's Completed flag; null means All.
         StatusOptions = new List<FilterOption<bool?>>
         {
+            new("All", null),
             new("Completed", true),
-            new("Stopped early", false),
-            new("All", null)
+            new("Stopped early", false)
         };
 
         PeriodOptions = new List<FilterOption<HistoryPeriod>>
         {
+            new("All", HistoryPeriod.All),
             new("Last 7 days", HistoryPeriod.Last7Days),
             new("Last 14 days", HistoryPeriod.Last14Days),
             new("Last 30 days", HistoryPeriod.Last30Days),
             new("Last 180 days", HistoryPeriod.Last180Days),
-            new("Last 365 days", HistoryPeriod.Last365Days),
-            new("All", HistoryPeriod.All)
+            new("Last 365 days", HistoryPeriod.Last365Days)
         };
 
         _selectedType = TypeOptions[0];
         _selectedMode = ModeOptions[0];
-        _selectedStatus = DefaultStatus;
-        _selectedPeriod = PeriodOptions[0];
+        _selectedStatus = StatusOptions[0];
+        _selectedPeriod = DefaultPeriod;
     }
 
     public ObservableCollection<SessionItemViewModel> Sessions { get; }
@@ -99,7 +99,7 @@ public class HistoryViewModel : ViewModelBase
     public List<FilterOption<bool?>> StatusOptions { get; }
     public List<FilterOption<HistoryPeriod>> PeriodOptions { get; }
 
-    private FilterOption<bool?> DefaultStatus => StatusOptions[^1];
+    private FilterOption<HistoryPeriod> DefaultPeriod => PeriodOptions.First(o => o.Value == HistoryPeriod.Last7Days);
 
     public FilterOption<bool?> SelectedStatus
     {
@@ -156,8 +156,8 @@ public class HistoryViewModel : ViewModelBase
 
         _selectedType = TypeOptions[0];
         _selectedMode = ModeOptions[0];
-        _selectedStatus = DefaultStatus;
-        _selectedPeriod = PeriodOptions[0];
+        _selectedStatus = StatusOptions[0];
+        _selectedPeriod = DefaultPeriod;
         OnPropertyChanged(nameof(SelectedType));
         OnPropertyChanged(nameof(SelectedMode));
         OnPropertyChanged(nameof(SelectedStatus));
