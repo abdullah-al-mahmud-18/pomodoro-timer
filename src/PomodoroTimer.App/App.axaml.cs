@@ -31,7 +31,7 @@ public class App : Application
             var sessionRepository = new SessionRepository(database);
             var dashboardService = new DashboardService();
             var dashboardViewModel = new DashboardViewModel(sessionRepository, dashboardService);
-            var historyViewModel = new HistoryViewModel(sessionRepository);
+            var historyViewModel = new HistoryViewModel(sessionRepository, dashboardViewModel);
 
             var notificationManager = NotificationManagerFactory.TryCreate();
             var notificationService = new NotificationService(notificationManager);

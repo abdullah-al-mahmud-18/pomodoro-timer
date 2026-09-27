@@ -5,33 +5,37 @@ using PomodoroTimer.Core.Models;
 namespace PomodoroTimer.App.ViewModels;
 
 /// <summary>
-/// Backs the History page: the full session list filtered by Type (Timer/Stopwatch), Mode (Work/Study/Break),
-/// and Period (rolling last-N-days window, or All). Filters default to Timer / Work / last 7 days each time
+/// Backs the History page: the full session list filtered by Type (All/Timer/Stopwatch), Mode (All/Work/Study/Break),
+/// and Period (rolling last-N-days window, or All). Filters default to All / All / last 7 days each time
 /// the page is opened.
 /// </summary>
 public class HistoryViewModel : ViewModelBase
 {
     private readonly SessionRepository _sessionRepository;
+    private readonly DashboardViewModel _dashboardViewModel;
 
-    private FilterOption<TimerMode> _selectedType;
-    private FilterOption<SessionCategory> _selectedMode;
+    private FilterOption<TimerMode?> _selectedType;
+    private FilterOption<SessionCategory?> _selectedMode;
     private FilterOption<HistoryPeriod> _selectedPeriod;
 
-    public HistoryViewModel(SessionRepository sessionRepository)
+    public HistoryViewModel(SessionRepository sessionRepository, DashboardViewModel dashboardViewModel)
     {
         _sessionRepository = sessionRepository;
+        _dashboardViewModel = dashboardViewModel;
 
         Sessions = new ObservableCollection<SessionItemViewModel>();
         DeleteSessionCommand = new RelayCommand<SessionItemViewModel>(Delete);
 
-        TypeOptions = new List<FilterOption<TimerMode>>
+        TypeOptions = new List<FilterOption<TimerMode?>>
         {
+            new("All", null),
             new("Timer", TimerMode.Timer),
             new("Stopwatch", TimerMode.Stopwatch)
         };
 
-        ModeOptions = new List<FilterOption<SessionCategory>>
+        ModeOptions = new List<FilterOption<SessionCategory?>>
         {
+            new("All", null),
             new("Work", SessionCategory.Work),
             new("Study", SessionCategory.Study),
             new("Break", SessionCategory.Break)
@@ -55,11 +59,11 @@ public class HistoryViewModel : ViewModelBase
     public ObservableCollection<SessionItemViewModel> Sessions { get; }
     public RelayCommand<SessionItemViewModel> DeleteSessionCommand { get; }
 
-    public List<FilterOption<TimerMode>> TypeOptions { get; }
-    public List<FilterOption<SessionCategory>> ModeOptions { get; }
+    public List<FilterOption<TimerMode?>> TypeOptions { get; }
+    public List<FilterOption<SessionCategory?>> ModeOptions { get; }
     public List<FilterOption<HistoryPeriod>> PeriodOptions { get; }
 
-    public FilterOption<TimerMode> SelectedType
+    public FilterOption<TimerMode?> SelectedType
     {
         get => _selectedType;
         set
@@ -71,7 +75,7 @@ public class HistoryViewModel : ViewModelBase
         }
     }
 
-    public FilterOption<SessionCategory> SelectedMode
+    public FilterOption<SessionCategory?> SelectedMode
     {
         get => _selectedMode;
         set
@@ -95,7 +99,7 @@ public class HistoryViewModel : ViewModelBase
         }
     }
 
-    /// <summary>Resets all filters to their defaults (Timer / Work / last 7 days) and reloads. Call when the page is opened.</summary>
+    /// <summary>Resets all filters to their defaults (All / All / last 7 days) and reloads. Call when the page is opened.</summary>
     public void ResetAndReload()
     {
         _selectedType = TypeOptions[0];
@@ -117,6 +121,7 @@ public class HistoryViewModel : ViewModelBase
 
         _sessionRepository.Delete(item.Id);
         ApplyFilters();
+        _dashboardViewModel.Refresh();
     }
 
     private void ApplyFilters()
@@ -128,12 +133,12 @@ public class HistoryViewModel : ViewModelBase
         Sessions.Clear();
         foreach (var session in _sessionRepository.GetAll())
         {
-            if (session.Mode != SelectedType.Value)
+            if (SelectedType.Value is { } type && session.Mode != type)
             {
                 continue;
             }
 
-            if (session.Category != SelectedMode.Value)
+            if (SelectedMode.Value is { } category && session.Category != category)
             {
                 continue;
             }

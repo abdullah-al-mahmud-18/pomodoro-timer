@@ -46,8 +46,16 @@ public class MainWindowViewModel : ViewModelBase
         PauseCommand = new RelayCommand(Pause, () => IsRunning && IsTimerMode);
         ResumeCommand = new RelayCommand(Resume, () => IsPaused);
         StopCommand = new RelayCommand(Stop, () => IsRunning || IsPaused);
-        ShowHistoryCommand = new RelayCommand(() => CurrentPage = AppPage.History);
-        ShowDashboardCommand = new RelayCommand(() => CurrentPage = AppPage.Dashboard);
+        ShowHistoryCommand = new RelayCommand(() =>
+        {
+            CurrentPage = AppPage.History;
+            History.ResetAndReload();
+        });
+        ShowDashboardCommand = new RelayCommand(() =>
+        {
+            CurrentPage = AppPage.Dashboard;
+            Dashboard.Refresh();
+        });
         ShowTimerCommand = new RelayCommand(() => CurrentPage = AppPage.Timer);
 
         _tickTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(250) };
@@ -77,15 +85,6 @@ public class MainWindowViewModel : ViewModelBase
                 OnPropertyChanged(nameof(IsTimerViewActive));
                 OnPropertyChanged(nameof(IsHistoryViewActive));
                 OnPropertyChanged(nameof(IsDashboardViewActive));
-
-                if (value == AppPage.History)
-                {
-                    History.ResetAndReload();
-                }
-                else if (value == AppPage.Dashboard)
-                {
-                    Dashboard.Refresh();
-                }
             }
         }
     }
