@@ -1,6 +1,7 @@
 using System;
 using DesktopNotifications;
 using DesktopNotifications.FreeDesktop;
+using Serilog;
 #if !LINUX_BUILD
 using DesktopNotifications.Windows;
 #endif
@@ -42,9 +43,10 @@ public static class NotificationManagerFactory
                 return manager;
             }
         }
-        catch
+        catch (Exception ex)
         {
             // No notification backend available (e.g. no D-Bus session) — app still runs without toasts.
+            Log.Warning(ex, "Notification backend unavailable; completion notifications are disabled");
         }
 
         return null;

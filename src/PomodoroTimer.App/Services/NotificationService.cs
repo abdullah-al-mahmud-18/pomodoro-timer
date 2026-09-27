@@ -1,6 +1,7 @@
 using System;
 using System.Threading.Tasks;
 using DesktopNotifications;
+using Serilog;
 
 namespace PomodoroTimer.App.Services;
 
@@ -29,9 +30,10 @@ public class NotificationService
                 Body = body
             });
         }
-        catch
+        catch (Exception ex)
         {
-            // Never let a notification failure interrupt the timer flow.
+            // Never let a notification failure interrupt the timer flow; the session is already saved.
+            Log.Warning(ex, "Couldn't show notification");
         }
     }
 }

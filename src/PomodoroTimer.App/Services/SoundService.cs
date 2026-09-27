@@ -3,6 +3,7 @@ using System.IO;
 using System.Reflection;
 using System.Threading.Tasks;
 using NetCoreAudio;
+using Serilog;
 
 namespace PomodoroTimer.App.Services;
 
@@ -12,15 +13,28 @@ public class SoundService : IDisposable
     private const int CompletionRepeatCount = 5;
 
     private Player? _currentPlayer;
-    private readonly string _soundFilePath;
+    private readonly string? _soundFilePath;
 
     public SoundService()
     {
-        _soundFilePath = ExtractBundledSoundToTempFile();
+        try
+        {
+            _soundFilePath = ExtractBundledSoundToTempFile();
+        }
+        catch (Exception ex)
+        {
+            // No sound file means no chime; notifications and saving sessions still work.
+            Log.Warning(ex, "Couldn't prepare the completion sound; sound is disabled");
+        }
     }
 
     public async Task PlayCompletionSoundAsync()
     {
+        if (_soundFilePath is null)
+        {
+            return;
+        }
+
         try
         {
             for (var i = 0; i < CompletionRepeatCount; i++)
@@ -38,9 +52,10 @@ public class SoundService : IDisposable
                 await finished.Task;
             }
         }
-        catch
+        catch (Exception ex)
         {
             // Audio backend unavailable — the OS notification still fired, so don't crash the app over sound.
+            Log.Warning(ex, "Couldn't play the completion sound");
         }
         finally
         {
@@ -71,9 +86,10 @@ public class SoundService : IDisposable
         {
             _currentPlayer?.Stop().GetAwaiter().GetResult();
         }
-        catch
+        catch (Exception ex)
         {
             // Best-effort cleanup on shutdown.
+            Log.Warning(ex, "Couldn't stop the completion sound on shutdown");
         }
     }
 }

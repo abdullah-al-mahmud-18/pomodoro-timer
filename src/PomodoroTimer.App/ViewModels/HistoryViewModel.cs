@@ -166,6 +166,13 @@ public class HistoryViewModel : ViewModelBase
         ApplyFilters();
     }
 
+    /// <summary>Re-reads the list with the current filters (e.g. after sync downloaded a newer database).</summary>
+    public void Reload()
+    {
+        IsConfirmingDeleteFiltered = false;
+        ApplyFilters();
+    }
+
     private void Delete(SessionItemViewModel? item)
     {
         if (item is null)

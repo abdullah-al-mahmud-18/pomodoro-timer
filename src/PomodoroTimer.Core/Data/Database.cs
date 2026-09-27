@@ -35,7 +35,8 @@ public class Database
         return connection;
     }
 
-    private void Initialize()
+    /// <summary>Creates/migrates the schema. Runs from the constructor, and again after sync swaps in a downloaded file.</summary>
+    public void Initialize()
     {
         using var connection = OpenConnection();
         using var command = connection.CreateCommand();

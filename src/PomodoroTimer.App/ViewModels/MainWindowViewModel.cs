@@ -1,9 +1,12 @@
 using System;
+using System.IO;
 using Avalonia.Threading;
+using Microsoft.Data.Sqlite;
 using PomodoroTimer.App.Services;
 using PomodoroTimer.Core.Data;
 using PomodoroTimer.Core.Models;
 using PomodoroTimer.Core.Services;
+using Serilog;
 
 namespace PomodoroTimer.App.ViewModels;
 
@@ -34,13 +37,15 @@ public class MainWindowViewModel : ViewModelBase
         NotificationService notificationService,
         SoundService soundService,
         DashboardViewModel dashboardViewModel,
-        HistoryViewModel historyViewModel)
+        HistoryViewModel historyViewModel,
+        SyncStatusViewModel syncStatus)
     {
         _sessionRepository = sessionRepository;
         _notificationService = notificationService;
         _soundService = soundService;
         Dashboard = dashboardViewModel;
         History = historyViewModel;
+        Sync = syncStatus;
 
         StartCommand = new RelayCommand(Start, () => !IsRunning && !IsPaused);
         PauseCommand = new RelayCommand(Pause, () => IsRunning);
@@ -66,6 +71,14 @@ public class MainWindowViewModel : ViewModelBase
 
     public DashboardViewModel Dashboard { get; }
     public HistoryViewModel History { get; }
+    public SyncStatusViewModel Sync { get; }
+
+    /// <summary>Re-reads History and Dashboard after sync replaced the database, keeping the current filters.</summary>
+    public void ReloadData()
+    {
+        History.Reload();
+        Dashboard.Refresh();
+    }
 
     public RelayCommand StartCommand { get; }
     public RelayCommand PauseCommand { get; }
@@ -315,15 +328,24 @@ public class MainWindowViewModel : ViewModelBase
     {
         Dispatcher.UIThread.Post(() =>
         {
-            _tickTimer.Stop();
-            UpdateTimeDisplay();
-            PersistSession();
+            try
+            {
+                _tickTimer.Stop();
+                UpdateTimeDisplay();
+                PersistSession();
 
-            var name = _engine?.Name ?? DefaultName();
-            _ = _notificationService.ShowAsync("Timer complete", $"\"{name}\" has finished.");
-            _ = _soundService.PlayCompletionSoundAsync();
-
-            ResetToConfiguring();
+                var name = _engine?.Name ?? DefaultName();
+                _ = _notificationService.ShowAsync("Timer complete", $"\"{name}\" has finished.");
+                _ = _soundService.PlayCompletionSoundAsync();
+            }
+            catch (Exception ex)
+            {
+                ErrorReporter.Report(ex, "Timer completion");
+            }
+            finally
+            {
+                ResetToConfiguring();
+            }
         });
     }
 
@@ -340,7 +362,18 @@ public class MainWindowViewModel : ViewModelBase
             return;
         }
 
-        _sessionRepository.Add(session);
+        try
+        {
+            _sessionRepository.Add(session);
+        }
+        catch (Exception ex) when (ex is SqliteException or IOException or UnauthorizedAccessException)
+        {
+            // Keep the session's details in the log so it can be recovered by hand, and tell the user.
+            Log.Error(ex, "Couldn't save session {Name} ({Mode}, {Category}): {ActualSeconds}s of {PlannedSeconds}s, {StartedAt:O} to {EndedAt:O}, completed {Completed}",
+                session.Name, session.Mode, session.Category, session.ActualDurationSeconds, session.PlannedDurationSeconds,
+                session.StartedAt, session.EndedAt, session.Completed);
+            ErrorMessage = $"Couldn't save \"{session.Name}\". {ErrorReporter.UserMessageFor(ex)}";
+        }
     }
 
     private void ResetToConfiguring()

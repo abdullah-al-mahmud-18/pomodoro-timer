@@ -1,9 +1,11 @@
+using System;
 using System.Linq;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.VisualTree;
+using Serilog;
 
 namespace PomodoroTimer.App.Views;
 
@@ -19,6 +21,15 @@ public partial class MainWindow : Window
         AddHandler(TextInputEvent, OnDigitsOnlyTextInput, RoutingStrategies.Tunnel);
         AddHandler(TextBox.PastingFromClipboardEvent, OnDigitsOnlyPasting);
     }
+
+    /// <summary>Covers the whole window with a message (e.g. "Syncing…") so nothing can be clicked underneath.</summary>
+    public void ShowBusyOverlay(string message)
+    {
+        BusyOverlayText.Text = message;
+        BusyOverlay.IsVisible = true;
+    }
+
+    public void HideBusyOverlay() => BusyOverlay.IsVisible = false;
 
     private static TextBox? DigitsOnlyTextBox(object? source)
     {
@@ -44,16 +55,24 @@ public partial class MainWindow : Window
 
         e.Handled = true;
 
-        var clipboard = TopLevel.GetTopLevel(textBox)?.Clipboard;
-        if (clipboard is null)
+        try
         {
-            return;
-        }
+            var clipboard = TopLevel.GetTopLevel(textBox)?.Clipboard;
+            if (clipboard is null)
+            {
+                return;
+            }
 
-        var digits = new string((await clipboard.GetTextAsync() ?? string.Empty).Where(char.IsAsciiDigit).ToArray());
-        if (digits.Length > 0)
+            var digits = new string((await clipboard.GetTextAsync() ?? string.Empty).Where(char.IsAsciiDigit).ToArray());
+            if (digits.Length > 0)
+            {
+                textBox.SelectedText = digits;
+            }
+        }
+        catch (Exception ex)
         {
-            textBox.SelectedText = digits;
+            // A clipboard failure just means nothing is pasted.
+            Log.Warning(ex, "Paste into duration box failed");
         }
     }
 }

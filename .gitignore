@@ -4,3 +4,6 @@ publish/
 *.user
 .vs/
 pomodoro.db
+
+# Google OAuth client credentials — never commit
+client_secret.json

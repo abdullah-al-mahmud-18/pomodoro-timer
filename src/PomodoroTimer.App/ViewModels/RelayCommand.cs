@@ -1,5 +1,6 @@
 using System;
 using System.Windows.Input;
+using PomodoroTimer.App.Services;
 
 namespace PomodoroTimer.App.ViewModels;
 
@@ -18,7 +19,18 @@ public class RelayCommand : ICommand
 
     public bool CanExecute(object? parameter) => _canExecute?.Invoke() ?? true;
 
-    public void Execute(object? parameter) => _execute();
+    /// <summary>UI boundary: a failing command is logged and reported, never allowed to crash the app.</summary>
+    public void Execute(object? parameter)
+    {
+        try
+        {
+            _execute();
+        }
+        catch (Exception ex)
+        {
+            ErrorReporter.Report(ex, "Command");
+        }
+    }
 
     public void RaiseCanExecuteChanged() => CanExecuteChanged?.Invoke(this, EventArgs.Empty);
 }

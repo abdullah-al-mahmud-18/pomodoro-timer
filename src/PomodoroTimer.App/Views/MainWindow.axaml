@@ -59,7 +59,17 @@
 
         <!-- Top nav bar -->
         <Grid Grid.Row="0" ColumnDefinitions="*,Auto" Margin="0,0,0,16">
-            <TextBlock Grid.Column="0" Text="Pomodoro Timer" FontSize="22" FontWeight="Bold" VerticalAlignment="Center" />
+            <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="16" VerticalAlignment="Center">
+                <TextBlock Text="Pomodoro Timer" FontSize="22" FontWeight="Bold" VerticalAlignment="Center" />
+                <!-- Sync status: small and unobtrusive, with Retry / Sign in when there's something to do. -->
+                <StackPanel DataContext="{Binding Sync}" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                    <TextBlock Text="{Binding StatusText}" ToolTip.Tip="{Binding Detail}"
+                               FontSize="12" Foreground="Gray" VerticalAlignment="Center" />
+                    <Button Content="{Binding ActionText}" Command="{Binding ActionCommand}"
+                            IsVisible="{Binding IsActionVisible}"
+                            FontSize="12" Padding="8,2" VerticalAlignment="Center" />
+                </StackPanel>
+            </StackPanel>
             <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
                 <Button Classes="nav" Classes.active="{Binding IsTimerViewActive}"
                         Content="Timer" Command="{Binding ShowTimerCommand}" />
@@ -304,6 +314,13 @@
 
             </StackPanel>
         </ScrollViewer>
+
+        <!-- Covers the window while startup/shutdown sync runs (and shows startup errors). Toggled from code-behind. -->
+        <Border x:Name="BusyOverlay" Grid.RowSpan="2" Margin="-16" Background="#F2121218" IsVisible="False">
+            <TextBlock x:Name="BusyOverlayText" Text="Syncing…" FontSize="18"
+                       TextWrapping="Wrap" TextAlignment="Center" MaxWidth="520"
+                       HorizontalAlignment="Center" VerticalAlignment="Center" />
+        </Border>
 
     </Grid>
 
