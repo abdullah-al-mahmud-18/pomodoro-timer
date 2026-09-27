@@ -63,6 +63,25 @@ public class SessionRepository
         command.ExecuteNonQuery();
     }
 
+    /// <summary>Deletes all sessions with the given ids in a single transaction.</summary>
+    public void DeleteMany(IEnumerable<int> ids)
+    {
+        using var connection = _database.OpenConnection();
+        using var transaction = connection.BeginTransaction();
+        using var command = connection.CreateCommand();
+        command.Transaction = transaction;
+        command.CommandText = "DELETE FROM Sessions WHERE Id = $id;";
+        var idParameter = command.Parameters.Add("$id", SqliteType.Integer);
+
+        foreach (var id in ids)
+        {
+            idParameter.Value = id;
+            command.ExecuteNonQuery();
+        }
+
+        transaction.Commit();
+    }
+
     private static Session ReadSession(SqliteDataReader reader)
     {
         return new Session

@@ -156,7 +156,7 @@
         </ScrollViewer>
 
         <!-- HISTORY VIEW -->
-        <DockPanel Grid.Row="1" IsVisible="{Binding IsHistoryViewActive}">
+        <Grid Grid.Row="1" IsVisible="{Binding IsHistoryViewActive}">
             <DockPanel DataContext="{Binding History}">
                 <TextBlock DockPanel.Dock="Top" Text="History" FontSize="18" FontWeight="Bold" Margin="0,0,0,12" />
 
@@ -175,11 +175,21 @@
                                   Width="140" />
                     </StackPanel>
                     <StackPanel Spacing="4">
+                        <TextBlock Text="Session" FontSize="12" Foreground="Gray" />
+                        <ComboBox ItemsSource="{Binding StatusOptions}"
+                                  SelectedItem="{Binding SelectedStatus}"
+                                  Width="140" />
+                    </StackPanel>
+                    <StackPanel Spacing="4">
                         <TextBlock Text="Period" FontSize="12" Foreground="Gray" />
                         <ComboBox ItemsSource="{Binding PeriodOptions}"
                                   SelectedItem="{Binding SelectedPeriod}"
                                   Width="140" />
                     </StackPanel>
+                    <Button Content="Delete Filtered Data"
+                            Command="{Binding DeleteFilteredCommand}"
+                            VerticalAlignment="Bottom"
+                            Background="#8B2E2E" Foreground="White" Padding="12,6" />
                 </StackPanel>
 
                 <ListBox ItemsSource="{Binding Sessions}">
@@ -189,10 +199,14 @@
                                 <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto">
                                     <TextBlock Grid.Row="0" Grid.Column="0" Text="{Binding Name}" FontWeight="Medium" />
                                     <Button Grid.Row="0" Grid.RowSpan="2" Grid.Column="1"
-                                            Content="✕"
+                                            ToolTip.Tip="Delete"
                                             Command="{Binding $parent[ListBox].((vm:HistoryViewModel)DataContext).DeleteSessionCommand}"
                                             CommandParameter="{Binding}"
-                                            Padding="6,2" VerticalAlignment="Top" />
+                                            Padding="6" VerticalAlignment="Center">
+                                        <!-- Trash bin icon (Material Design "delete") -->
+                                        <PathIcon Width="14" Height="14"
+                                                  Data="M6,19A2,2 0 0,0 8,21H16A2,2 0 0,0 18,19V7H6V19M19,4H15.5L14.5,3H9.5L8.5,4H5V6H19V4Z" />
+                                    </Button>
                                     <TextBlock Grid.Row="1" Grid.Column="0" FontSize="11" Foreground="Gray">
                                         <Run Text="{Binding ModeDisplay}" />
                                         <Run Text=" · " />
@@ -210,7 +224,28 @@
                     </ListBox.ItemTemplate>
                 </ListBox>
             </DockPanel>
-        </DockPanel>
+
+            <!-- "Are you sure?" overlay for Delete Filtered Data; covers the page so nothing else can be clicked. -->
+            <Border DataContext="{Binding History}"
+                    IsVisible="{Binding IsConfirmingDeleteFiltered}"
+                    Background="#B3000000">
+                <Border Background="#1E1E2E" CornerRadius="8" Padding="24"
+                        MaxWidth="420" HorizontalAlignment="Center" VerticalAlignment="Center">
+                    <StackPanel Spacing="16">
+                        <TextBlock Text="Are you sure?" FontSize="18" FontWeight="Bold" />
+                        <TextBlock Text="{Binding DeleteFilteredPrompt}" TextWrapping="Wrap" />
+                        <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
+                            <Button Content="Cancel"
+                                    Command="{Binding CancelDeleteFilteredCommand}"
+                                    Padding="12,6" />
+                            <Button Content="Delete"
+                                    Command="{Binding ConfirmDeleteFilteredCommand}"
+                                    Background="#8B2E2E" Foreground="White" Padding="12,6" />
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+            </Border>
+        </Grid>
 
         <!-- DASHBOARD VIEW -->
         <ScrollViewer Grid.Row="1" IsVisible="{Binding IsDashboardViewActive}">

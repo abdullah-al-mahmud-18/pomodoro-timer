@@ -65,6 +65,34 @@ public class RepositoryTests : IDisposable
     }
 
     [Fact]
+    public void SessionRepository_DeleteMany_RemovesOnlyGivenIds()
+    {
+        var repo = new SessionRepository(_database);
+        var now = DateTimeOffset.UtcNow;
+
+        Session AddSession(string name) => repo.Add(new Session
+        {
+            Name = name,
+            Mode = TimerMode.Timer,
+            Category = SessionCategory.Work,
+            PlannedDurationSeconds = 60,
+            ActualDurationSeconds = 60,
+            StartedAt = now.AddMinutes(-1),
+            EndedAt = now,
+            Completed = true
+        });
+
+        var first = AddSession("First");
+        var second = AddSession("Second");
+        var kept = AddSession("Kept");
+
+        repo.DeleteMany(new[] { first.Id, second.Id });
+
+        var remaining = Assert.Single(repo.GetAll());
+        Assert.Equal(kept.Id, remaining.Id);
+    }
+
+    [Fact]
     public void Database_MigratesExistingSessionsTable_WithoutCategoryColumn()
     {
         // Simulate a pre-Category database by dropping the column the fresh Database() ctor just added.
