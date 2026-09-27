@@ -350,6 +350,7 @@ public class MainWindowViewModel : ViewModelBase
         IsPaused = false;
         Progress = 0;
         SelectedCategory = null;
+        SessionName = string.Empty;
         UpdateTimeDisplay();
     }
 
