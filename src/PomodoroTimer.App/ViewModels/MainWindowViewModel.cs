@@ -356,6 +356,7 @@ public class MainWindowViewModel : ViewModelBase
         IsRunning = false;
         IsPaused = false;
         Progress = 0;
+        SelectedCategory = null;
         UpdateTimeDisplay();
     }
 
