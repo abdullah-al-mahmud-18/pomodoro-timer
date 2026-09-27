@@ -113,13 +113,13 @@
                 <StackPanel Spacing="4" IsVisible="{Binding IsTimerMode}">
                     <TextBlock Text="Duration" FontSize="12" Foreground="Gray" />
                     <StackPanel Orientation="Horizontal" Spacing="6">
-                        <TextBox Text="{Binding HoursText}" Width="56" HorizontalContentAlignment="Center"
+                        <TextBox Classes="digitsOnly" Text="{Binding HoursText}" Width="56" HorizontalContentAlignment="Center"
                                   IsEnabled="{Binding IsConfiguring}" />
                         <TextBlock Text="h" VerticalAlignment="Center" />
-                        <TextBox Text="{Binding MinutesText}" Width="56" HorizontalContentAlignment="Center"
+                        <TextBox Classes="digitsOnly" Text="{Binding MinutesText}" Width="56" HorizontalContentAlignment="Center"
                                   IsEnabled="{Binding IsConfiguring}" />
                         <TextBlock Text="m" VerticalAlignment="Center" />
-                        <TextBox Text="{Binding SecondsText}" Width="56" HorizontalContentAlignment="Center"
+                        <TextBox Classes="digitsOnly" Text="{Binding SecondsText}" Width="56" HorizontalContentAlignment="Center"
                                   IsEnabled="{Binding IsConfiguring}" />
                         <TextBlock Text="s" VerticalAlignment="Center" />
                     </StackPanel>
