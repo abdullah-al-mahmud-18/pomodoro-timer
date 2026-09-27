@@ -43,7 +43,7 @@ public class MainWindowViewModel : ViewModelBase
         History = historyViewModel;
 
         StartCommand = new RelayCommand(Start, () => !IsRunning && !IsPaused);
-        PauseCommand = new RelayCommand(Pause, () => IsRunning && IsTimerMode);
+        PauseCommand = new RelayCommand(Pause, () => IsRunning);
         ResumeCommand = new RelayCommand(Resume, () => IsPaused);
         StopCommand = new RelayCommand(Stop, () => IsRunning || IsPaused);
         ShowHistoryCommand = new RelayCommand(() =>
@@ -378,8 +378,6 @@ public class MainWindowViewModel : ViewModelBase
 
     private static string FormatTimeSpan(TimeSpan span)
     {
-        return span.TotalHours >= 1
-            ? $"{(int)span.TotalHours:D2}:{span.Minutes:D2}:{span.Seconds:D2}"
-            : $"{span.Minutes:D2}:{span.Seconds:D2}";
+        return $"{(int)span.TotalHours:D2}:{span.Minutes:D2}:{span.Seconds:D2}";
     }
 }
