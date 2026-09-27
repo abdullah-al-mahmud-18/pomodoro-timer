@@ -38,6 +38,10 @@ dotnet run --project src/PomodoroTimer.App/PomodoroTimer.App.csproj -f net10.0-w
 dotnet run --project src/PomodoroTimer.App/PomodoroTimer.App.csproj -f net10.0
 ```
 
+Close the app before rebuilding. On Windows a running copy locks its output files, and `dotnet build` fails with `MSB3027: Could not copy ... The file is locked by: "PomodoroTimer.App"`.
+
+A local run uses the same database as any published build on the machine (see [Data model](README.md#data-model)), so sessions you record while testing show up in the published app too. To start from an empty history, close the app and delete `pomodoro.db`; it's recreated on the next launch.
+
 ## Running tests
 
 ```bash

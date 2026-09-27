@@ -6,12 +6,18 @@ A cross-platform Pomodoro / timer & stopwatch desktop app built with Avalonia UI
 
 ## Features
 
-- **Timer** — counts down from a duration you set, with a live progress bar.
-- **Stopwatch** — counts up with no fixed duration.
-- **Custom durations** — set any hours/minutes/seconds combination, with a name, for either mode.
-- **Mode** — every session is tagged Work, Study, or Break; a mode must be selected before starting.
-- **History** — every completed or stopped session is logged with name, mode, category, duration, and timestamps; entries can be deleted individually.
-- **Dashboard** — totals for today and rolling 7/14/30/90/365-day windows, plus daily averages for the 7/14/30/90-day windows, broken down by Work/Study/Break.
+- **Timer** — counts down from a duration you set, with a live progress bar. Can be paused, resumed, and stopped.
+- **Stopwatch** — counts up with no fixed duration. Can be paused, resumed, and stopped.
+- **Custom durations** — set any hours/minutes/seconds combination, with a name, for either mode. The duration boxes accept digits only; letters and symbols are ignored as you type or paste.
+- **Mode** — every session is tagged Work, Study, or Break; a mode must be selected before starting. Mode and Name are cleared when a session ends, ready for the next one.
+- **Time display** — always `HH:MM:SS` (e.g. `00:25:00`), whether idle, running, or paused.
+- **History** — every completed or stopped session is logged with name, mode, category, duration, status, and timestamps.
+  - Filters: **Type** (All / Timer / Stopwatch), **Mode** (All / Work / Study / Break), **Session** (Completed / Stopped early / All), and **Period** (last 7 / 14 / 30 / 180 / 365 days, or All). Filters reset to All / All / All / Last 7 days each time the page is opened.
+  - Delete a single entry with its bin icon, or delete everything the current filters show with **Delete Filtered Data** (asks "Are you sure?" first).
+  - Stopwatch sessions always count as Completed, since a stopwatch has no target to stop short of.
+- **Dashboard** — totals for today and rolling 7/14/30/90/365-day windows, plus daily averages for the 7/14/30/90-day windows, broken down by Work/Study/Break. Reloaded from the database every time the page is opened, and after deletes in History. It always counts all sessions and ignores History's filters.
+- **Navigation** — Timer, Dashboard, and History buttons on every page; the current page is highlighted. A running timer or stopwatch keeps going while you view other pages.
+- **Dark theme** — the app always uses a dark theme, regardless of the OS setting.
 - **Completion notification** — when a timer reaches zero, you get a native OS toast notification and a completion sound. (Stopwatch sessions end via Stop, since counting up has no natural completion point.)
 
 All data is stored locally in a single SQLite file — no cloud sync, no accounts, no network access.
@@ -20,7 +26,7 @@ All data is stored locally in a single SQLite file — no cloud sync, no account
 
 | Concern | Choice |
 |---|---|
-| UI framework | [Avalonia UI](https://avaloniaui.net/) (XAML, Fluent theme) |
+| UI framework | [Avalonia UI](https://avaloniaui.net/) (XAML, Fluent theme, dark variant only) |
 | Runtime | .NET 10 |
 | Storage | SQLite via `Microsoft.Data.Sqlite` (no ORM, hand-written SQL) |
 | Notifications | `DesktopNotifications` + `DesktopNotifications.Windows` / `DesktopNotifications.FreeDesktop` |
@@ -46,8 +52,8 @@ src/
     Services/               TimerEngine (countdown/count-up/pause/resume/complete state machine),
                              DashboardService (totals + daily averages per category and time window)
   PomodoroTimer.App/        Avalonia UI
-    ViewModels/              MainWindowViewModel, DashboardViewModel and friends (plain INotifyPropertyChanged, no framework)
-    Views/                   MainWindow.axaml (Timer, History, and Dashboard pages)
+    ViewModels/              MainWindowViewModel, DashboardViewModel, HistoryViewModel and friends (plain INotifyPropertyChanged, no framework)
+    Views/                   MainWindow.axaml (Timer, History, and Dashboard pages); code-behind holds the digits-only input filter
     Services/                NotificationService, SoundService, NotificationManagerFactory
     Assets/complete.wav      Bundled completion chime
 tests/
@@ -66,6 +72,8 @@ The database file lives at:
 
 - Windows: `%LOCALAPPDATA%\PomodoroTimer\pomodoro.db`
 - Linux: `~/.local/share/PomodoroTimer/pomodoro.db`
+
+The path depends only on the user account, not on where the app runs from, so a local development build and a published build on the same machine share the same history.
 
 ## Known limitations
 
