@@ -11,6 +11,23 @@
     <!-- Dashboard tables: every header and row uses the same fixed ColumnDefinitions="200,120,120,120",
          so columns line up regardless of text length. -->
     <Window.Styles>
+        <!-- Top nav: all three pages always reachable; the current page's button is highlighted. -->
+        <Style Selector="Button.nav">
+            <Setter Property="Background" Value="#2A2A3A" />
+            <Setter Property="Foreground" Value="White" />
+            <Setter Property="Padding" Value="12,6" />
+        </Style>
+        <Style Selector="Button.nav:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="#3A3A4E" />
+            <Setter Property="Foreground" Value="White" />
+        </Style>
+        <Style Selector="Button.nav.active">
+            <Setter Property="Background" Value="{DynamicResource SystemAccentColor}" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+        </Style>
+        <Style Selector="Button.nav.active:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource SystemAccentColorLight1}" />
+        </Style>
         <Style Selector="Grid.dashColumns > TextBlock">
             <Setter Property="VerticalAlignment" Value="Center" />
         </Style>
@@ -43,19 +60,14 @@
         <!-- Top nav bar -->
         <Grid Grid.Row="0" ColumnDefinitions="*,Auto" Margin="0,0,0,16">
             <TextBlock Grid.Column="0" Text="Pomodoro Timer" FontSize="22" FontWeight="Bold" VerticalAlignment="Center" />
-            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8"
-                        IsVisible="{Binding IsTimerViewActive}">
-                <Button Content="Dashboard"
-                        Command="{Binding ShowDashboardCommand}"
-                        Background="#2A2A3A" Foreground="White" Padding="12,6" />
-                <Button Content="History"
-                        Command="{Binding ShowHistoryCommand}"
-                        Background="#2A2A3A" Foreground="White" Padding="12,6" />
+            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
+                <Button Classes="nav" Classes.active="{Binding IsTimerViewActive}"
+                        Content="Timer" Command="{Binding ShowTimerCommand}" />
+                <Button Classes="nav" Classes.active="{Binding IsDashboardViewActive}"
+                        Content="Dashboard" Command="{Binding ShowDashboardCommand}" />
+                <Button Classes="nav" Classes.active="{Binding IsHistoryViewActive}"
+                        Content="History" Command="{Binding ShowHistoryCommand}" />
             </StackPanel>
-            <Button Grid.Column="1" Content="&#x2190; Back to timer"
-                    Command="{Binding ShowTimerCommand}"
-                    IsVisible="{Binding !IsTimerViewActive}"
-                    Background="#2A2A3A" Foreground="White" Padding="12,6" />
         </Grid>
 
         <!-- TIMER / STOPWATCH VIEW -->
