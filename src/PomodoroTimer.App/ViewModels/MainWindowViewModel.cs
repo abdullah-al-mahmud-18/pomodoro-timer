@@ -1,5 +1,4 @@
 using System;
-using System.Collections.ObjectModel;
 using Avalonia.Threading;
 using PomodoroTimer.App.Services;
 using PomodoroTimer.Core.Data;
@@ -34,20 +33,19 @@ public class MainWindowViewModel : ViewModelBase
         SessionRepository sessionRepository,
         NotificationService notificationService,
         SoundService soundService,
-        DashboardViewModel dashboardViewModel)
+        DashboardViewModel dashboardViewModel,
+        HistoryViewModel historyViewModel)
     {
         _sessionRepository = sessionRepository;
         _notificationService = notificationService;
         _soundService = soundService;
         Dashboard = dashboardViewModel;
-
-        History = new ObservableCollection<SessionItemViewModel>();
+        History = historyViewModel;
 
         StartCommand = new RelayCommand(Start, () => !IsRunning && !IsPaused);
         PauseCommand = new RelayCommand(Pause, () => IsRunning && IsTimerMode);
         ResumeCommand = new RelayCommand(Resume, () => IsPaused);
         StopCommand = new RelayCommand(Stop, () => IsRunning || IsPaused);
-        DeleteSessionCommand = new RelayCommand<SessionItemViewModel>(DeleteSession);
         ShowHistoryCommand = new RelayCommand(() => CurrentPage = AppPage.History);
         ShowDashboardCommand = new RelayCommand(() => CurrentPage = AppPage.Dashboard);
         ShowTimerCommand = new RelayCommand(() => CurrentPage = AppPage.Timer);
@@ -55,19 +53,16 @@ public class MainWindowViewModel : ViewModelBase
         _tickTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(250) };
         _tickTimer.Tick += (_, _) => OnTick();
 
-        ReloadHistory();
         UpdateTimeDisplay();
     }
 
     public DashboardViewModel Dashboard { get; }
-
-    public ObservableCollection<SessionItemViewModel> History { get; }
+    public HistoryViewModel History { get; }
 
     public RelayCommand StartCommand { get; }
     public RelayCommand PauseCommand { get; }
     public RelayCommand ResumeCommand { get; }
     public RelayCommand StopCommand { get; }
-    public RelayCommand<SessionItemViewModel> DeleteSessionCommand { get; }
     public RelayCommand ShowHistoryCommand { get; }
     public RelayCommand ShowDashboardCommand { get; }
     public RelayCommand ShowTimerCommand { get; }
@@ -85,7 +80,7 @@ public class MainWindowViewModel : ViewModelBase
 
                 if (value == AppPage.History)
                 {
-                    ReloadHistory();
+                    History.ResetAndReload();
                 }
                 else if (value == AppPage.Dashboard)
                 {
@@ -347,7 +342,6 @@ public class MainWindowViewModel : ViewModelBase
         }
 
         _sessionRepository.Add(session);
-        ReloadHistory();
     }
 
     private void ResetToConfiguring()
@@ -388,25 +382,5 @@ public class MainWindowViewModel : ViewModelBase
         return span.TotalHours >= 1
             ? $"{(int)span.TotalHours:D2}:{span.Minutes:D2}:{span.Seconds:D2}"
             : $"{span.Minutes:D2}:{span.Seconds:D2}";
-    }
-
-    private void DeleteSession(SessionItemViewModel? item)
-    {
-        if (item is null)
-        {
-            return;
-        }
-
-        _sessionRepository.Delete(item.Id);
-        ReloadHistory();
-    }
-
-    private void ReloadHistory()
-    {
-        History.Clear();
-        foreach (var session in _sessionRepository.GetAll())
-        {
-            History.Add(new SessionItemViewModel(session));
-        }
     }
 }

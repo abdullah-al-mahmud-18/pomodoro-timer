@@ -31,6 +31,7 @@ public class App : Application
             var sessionRepository = new SessionRepository(database);
             var dashboardService = new DashboardService();
             var dashboardViewModel = new DashboardViewModel(sessionRepository, dashboardService);
+            var historyViewModel = new HistoryViewModel(sessionRepository);
 
             var notificationManager = NotificationManagerFactory.TryCreate();
             var notificationService = new NotificationService(notificationManager);
@@ -38,7 +39,7 @@ public class App : Application
 
             desktop.MainWindow = new MainWindow
             {
-                DataContext = new MainWindowViewModel(sessionRepository, notificationService, soundService, dashboardViewModel)
+                DataContext = new MainWindowViewModel(sessionRepository, notificationService, soundService, dashboardViewModel, historyViewModel)
             };
 
             desktop.ShutdownRequested += (_, _) =>
