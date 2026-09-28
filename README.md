@@ -34,7 +34,9 @@ Sync is optional. Without a `client_secret.json` next to the executable the app 
 How it works:
 
 - **Sign-in** — click **Sign in** in the title bar. Your browser opens for Google's sign-in; if it doesn't, the dialog shows a link you can open yourself. The app asks only for the `drive.file` permission, so it can see only the file it created, not the rest of your Drive.
-- **One file in Drive** — the app keeps exactly one `pomodoro.db` in your Drive (tagged with the app property `pomodoroSync=primary`) and always updates that same file. Drive keeps its earlier versions in the file's version history.
+- **One file in Drive** — the app keeps exactly one `pomodoro.db` in your Drive, at `PomodoroTimer/pomodoro.db` (tagged with the app property `pomodoroSync=primary`), and always updates that same file. Drive keeps its earlier versions in the file's version history.
+  - The app creates the `PomodoroTimer` folder itself and finds it by an app property, so renaming it is fine. A folder you create by hand isn't used, because `drive.file` doesn't let the app see it.
+  - A `pomodoro.db` that an earlier version put at the top of My Drive is moved into the folder on its next upload. It keeps the same file and version history.
 - **When it syncs** — at startup, before the database is opened, the window shows "Syncing…". At close, the app uploads what changed, allowing about 30 seconds; if the upload fails, the next start uploads it. There's no background sync; after a problem you can press **Retry** in the title bar.
 - **Change detection** — the app compares content hashes (MD5) of the local file, the Drive file, and the version recorded at the last sync. It doesn't compare timestamps.
   - If only Drive changed, the local copy is backed up and then replaced.

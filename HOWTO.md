@@ -40,7 +40,7 @@ dotnet run --project src/PomodoroTimer.App/PomodoroTimer.App.csproj -f net10.0
 
 Close the app before rebuilding. On Windows a running copy locks its output files, and `dotnet build` fails with `MSB3027: Could not copy ... The file is locked by: "PomodoroTimer.App"`.
 
-A local run uses the same database as any published build on the machine (see [Data model](README.md#data-model)), so sessions you record while testing show up in the published app too. To start from an empty history, close the app and delete `pomodoro.db`; it's recreated on the next launch. If sync is set up and a copy exists in Google Drive, the next launch downloads it again. To start completely fresh, also delete `sync-state.json` and the `pomodoro.db` file in Google Drive.
+A local run uses the same database as any published build on the machine (see [Data model](README.md#data-model)), so sessions you record while testing show up in the published app too. To start from an empty history, close the app and delete `pomodoro.db`; it's recreated on the next launch. If sync is set up and a copy exists in Google Drive, the next launch downloads it again. To start completely fresh, also delete `sync-state.json` and the `PomodoroTimer` folder (which holds `pomodoro.db`) in Google Drive.
 
 Log files (`pomodoro-<date>.log`) are written to the same folder as `pomodoro.db`.
 
@@ -78,7 +78,7 @@ The app looks for `client_secret.json` in the folder that contains the executabl
 
 ### 5. Sign in
 
-Start the app and click **Sign in** in the title bar. Your browser opens so you can sign in to Google. On Ubuntu this uses `xdg-open`. If no browser opens, copy the link shown in the sign-in dialog into a browser. After you allow access, the app syncs straight away. After that it syncs at every start and close.
+Start the app and click **Sign in** in the title bar. Your browser opens so you can sign in to Google. On Ubuntu this uses `xdg-open`. If no browser opens, copy the link shown in the sign-in dialog into a browser. After you allow access, the app syncs straight away. The database goes to `PomodoroTimer/pomodoro.db` in your My Drive, and the app creates the folder itself. After that it syncs at every start and close.
 
 To sign out on a computer, close the app and delete the `google-token` folder in the app directory.
 

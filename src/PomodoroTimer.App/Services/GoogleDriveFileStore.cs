@@ -14,23 +14,29 @@ using Google.Apis.Services;
 using Google.Apis.Upload;
 using Google.Apis.Util;
 using PomodoroTimer.Core.Sync;
+using Serilog;
 using DriveFile = Google.Apis.Drive.v3.Data.File;
 
 namespace PomodoroTimer.App.Services;
 
 /// <summary>
-/// The single pomodoro.db file in the user's Google Drive, tagged with appProperties { pomodoroSync: primary }.
+/// The single pomodoro.db file in the user's Google Drive, tagged with appProperties { pomodoroSync: primary }
+/// and kept in a PomodoroTimer folder (tagged { pomodoroSync: folder }) that the app creates.
 /// Only whole-file upload/download — the database is never accessed over the network.
 /// </summary>
 public sealed class GoogleDriveFileStore : ICloudFileStore, IDisposable
 {
     private const string FileName = "pomodoro.db";
     private const string MimeType = "application/x-sqlite3";
+    private const string FolderName = "PomodoroTimer";
+    private const string FolderMimeType = "application/vnd.google-apps.folder";
     private const string AppPropertyKey = "pomodoroSync";
     private const string AppPropertyValue = "primary";
-    private const string FileFields = "id, md5Checksum, trashed";
+    private const string FolderPropertyValue = "folder";
+    private const string FileFields = "id, md5Checksum, trashed, parents";
 
     private readonly DriveService _service;
+    private string? _folderId;
 
     public GoogleDriveFileStore(IConfigurableHttpClientInitializer credential)
     {
@@ -84,6 +90,7 @@ public sealed class GoogleDriveFileStore : ICloudFileStore, IDisposable
         {
             Name = FileName,
             MimeType = MimeType,
+            Parents = new List<string> { await GetOrCreateFolderAsync(cancellationToken) },
             AppProperties = new Dictionary<string, string> { [AppPropertyKey] = AppPropertyValue }
         };
 
@@ -100,6 +107,8 @@ public sealed class GoogleDriveFileStore : ICloudFileStore, IDisposable
         var request = _service.Files.Update(new DriveFile(), fileId, stream, MimeType);
         request.Fields = FileFields;
         ThrowIfFailed(await request.UploadAsync(cancellationToken));
+
+        await TryMoveIntoFolderAsync(request.ResponseBody, cancellationToken);
         return ToInfo(request.ResponseBody);
     }
 
@@ -113,6 +122,81 @@ public sealed class GoogleDriveFileStore : ICloudFileStore, IDisposable
     }
 
     public void Dispose() => _service.Dispose();
+
+    /// <summary>
+    /// The app's PomodoroTimer folder, found by its appProperties tag (so a rename doesn't matter) or created at
+    /// the top of My Drive. With the drive.file scope the app only sees folders it created itself.
+    /// </summary>
+    private async Task<string> GetOrCreateFolderAsync(CancellationToken cancellationToken)
+    {
+        if (_folderId is not null)
+        {
+            return _folderId;
+        }
+
+        var list = _service.Files.List();
+        list.Q = $"mimeType = '{FolderMimeType}' and appProperties has {{ key='{AppPropertyKey}' and value='{FolderPropertyValue}' }} and trashed = false";
+        list.Spaces = "drive";
+        list.Fields = "files(id)";
+        list.OrderBy = "createdTime";
+        list.PageSize = 10;
+
+        var folders = (await list.ExecuteAsync(cancellationToken)).Files ?? new List<DriveFile>();
+        if (folders.Count > 0)
+        {
+            // A folder holds no data itself, so with duplicates it's safe to pick one: the oldest.
+            if (folders.Count > 1)
+            {
+                Log.Warning("Found {Count} {FolderName} folders in Google Drive; using the oldest, {FolderId}",
+                    folders.Count, FolderName, folders[0].Id);
+            }
+            return _folderId = folders[0].Id;
+        }
+
+        var create = _service.Files.Create(new DriveFile
+        {
+            Name = FolderName,
+            MimeType = FolderMimeType,
+            AppProperties = new Dictionary<string, string> { [AppPropertyKey] = FolderPropertyValue }
+        });
+        create.Fields = "id";
+        var folder = await create.ExecuteAsync(cancellationToken);
+        Log.Information("Created Google Drive folder {FolderName} ({FolderId})", FolderName, folder.Id);
+        return _folderId = folder.Id;
+    }
+
+    /// <summary>
+    /// Moves the database file into the app folder if it's elsewhere (e.g. uploaded to the top of My Drive by an
+    /// earlier version). The file ID and revision history are kept. Best effort: the content upload has already
+    /// succeeded, so a failed move is only logged and tried again on the next upload.
+    /// </summary>
+    private async Task TryMoveIntoFolderAsync(DriveFile file, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var folderId = await GetOrCreateFolderAsync(cancellationToken);
+            var parents = file.Parents ?? new List<string>();
+            if (parents.Contains(folderId))
+            {
+                return;
+            }
+
+            var move = _service.Files.Update(new DriveFile(), file.Id);
+            move.AddParents = folderId;
+            if (parents.Count > 0)
+            {
+                move.RemoveParents = string.Join(",", parents);
+            }
+            move.Fields = "id";
+            await move.ExecuteAsync(cancellationToken);
+            Log.Information("Moved cloud file {FileId} into the {FolderName} folder", file.Id, FolderName);
+        }
+        catch (Exception ex)
+        {
+            Log.Warning(ex, "Couldn't move cloud file {FileId} into the {FolderName} folder; will try again on the next upload",
+                file.Id, FolderName);
+        }
+    }
 
     private static CloudFileInfo ToInfo(DriveFile file) => new(file.Id, file.Md5Checksum);
 
