@@ -21,6 +21,7 @@ The `scripts/` folder wraps the run and publish commands below, with a bash and 
 | Run locally | `./scripts/run.sh` | `.\scripts\run.ps1` |
 | Publish for the current OS | `./scripts/publish.sh` | `.\scripts\publish.ps1` |
 | Publish for a specific target | `./scripts/publish.sh win-x64` / `linux-x64` / `all` | `.\scripts\publish.ps1 -Runtime win-x64` / `linux-x64` / `all` |
+| Add the launcher entry and icon on Ubuntu (see [below](#showing-the-app-icon-on-ubuntu)) | `./scripts/install-desktop-entry.sh` | — |
 
 Published builds go to `publish/<runtime>/`.
 
@@ -101,3 +102,14 @@ dotnet publish src/PomodoroTimer.App/PomodoroTimer.App.csproj -c Release -r linu
 ```
 
 Each output folder contains the app executable (`PomodoroTimer.App.exe` on Windows, `PomodoroTimer.App` on Linux) next to a few native libraries (SkiaSharp, HarfBuzz, SQLite). Copy the whole folder when distributing.
+
+### Showing the app icon on Ubuntu
+
+GNOME (Ubuntu's desktop) doesn't use the icon a window sets for itself, so the dock, Alt-Tab, and Activities show a generic icon until the app has a launcher entry. After publishing, run once:
+
+```bash
+./scripts/install-desktop-entry.sh                        # uses publish/linux-x64/PomodoroTimer.App
+./scripts/install-desktop-entry.sh /path/to/PomodoroTimer.App   # or a folder you copied elsewhere
+```
+
+This writes `~/.local/share/applications/pomodoro-timer.desktop` and copies the icon to `~/.local/share/icons/`. "Pomodoro Timer" then appears in the app grid, where you can pin it to the dock. Windows started with `./scripts/run.sh` get the icon too. Run the script again if you move the published folder, and remove the entry with `./scripts/install-desktop-entry.sh --uninstall`.

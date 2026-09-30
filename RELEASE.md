@@ -1,12 +1,25 @@
 # Release notes
 
-## 2.0.0 — 2026-09-28
+## 2.0.1 — 2026-09-30
+
+Pomodoro Timer 2.0.1 brings version 2.0 to **Ubuntu 24.04** and fixes two problems that affected the app on Ubuntu. Windows 11 behaves the same as in 2.0.0, released on 2026-09-28. If you already run 2.0.0 on Windows, you don't need to update.
 
 Pomodoro Timer 2.0 lets you keep the same history on more than one computer, such as a laptop and a desktop PC, by syncing it through your own Google Drive. It also handles problems more gracefully and keeps log files to help track them down. Everything from 1.0 works as before, and sync is optional: if you don't turn it on, the app stays fully offline.
 
-This release is for **Windows 11**.
+This release is for **Windows 11** and **Ubuntu 24.04**. Both have the same features and share one history format. You can sync a Windows PC and an Ubuntu laptop through the same Google account.
 
-### What's new
+### Fixed on Ubuntu
+
+- **The app no longer freezes at startup.** The window stayed on **Syncing…** and never opened your timer or history. It now opens normally, whether or not sync is set up.
+- **The app can now show its hourglass icon in the dock and Alt-Tab.** Ubuntu showed a generic icon instead. Adding a launcher entry once fixes this. See [Showing the app icon in the Ubuntu dock](#showing-the-app-icon-in-the-ubuntu-dock).
+- If the desktop's notification service doesn't respond, the app now starts anyway, with completion notifications turned off, instead of waiting indefinitely.
+
+### What's new in 2.0
+
+**Now on Ubuntu**
+
+- Version 2 is now available for Ubuntu 24.04 (64-bit).
+- Timer, stopwatch, history, notifications, the completion chime, and Google Drive sync all work the same as on Windows.
 
 **Sync your history through Google Drive**
 
@@ -43,28 +56,50 @@ If both computers have changes the other doesn't have, the app asks what to do:
 
 ### Setting up sync
 
-For sync to work, the app folder needs a `client_secret.json` file, which links the app to a Google Cloud project. If the file is missing, the title bar shows **Sync not configured** and the app works offline as before. [HOWTO.md](HOWTO.md#setting-up-google-drive-sync) explains how to create the Google Cloud project and the file. You do this once.
+For sync to work, the app folder needs a `client_secret.json` file, which links the app to a Google Cloud project. If the file is missing, the title bar shows **Sync not configured** and the app works offline as before. [HOWTO.md](HOWTO.md#setting-up-google-drive-sync) explains how to create the Google Cloud project and the file. You do this once. The same file works for both Windows and Ubuntu, so copy it into each computer's app folder.
 
-### Upgrading from 1.0
+### Upgrading from 1.0 or 2.0.0
 
 - Your history carries over. Replace the old app folder with the new one and leave your data file where it is.
 - **If you use more than one computer:** sign in on the computer whose history you want to keep first. Its history is uploaded to Google Drive. When you then sign in on a second computer that already has sessions of its own, the app asks which history to keep. Sessions from 1.0 on different computers can't be combined.
 
 ### Download and run
 
-There's no installer. The download is a folder containing the app and everything it needs, including .NET, so you don't have to install anything else.
+There's no installer. Each download is a folder containing the app and everything it needs, including .NET, so you don't have to install anything else. Keep all the files in the folder together. The app needs the files next to it, including `client_secret.json` if you use sync.
+
+#### Windows 11
 
 Put the `win-x64` folder anywhere (unzip it first if you received a zip) and run `PomodoroTimer.App.exe`.
 
-Keep all the files in the folder together. The app needs the files next to it, including `client_secret.json` if you use sync.
+#### Ubuntu 24.04
+
+Put the `linux-x64` folder anywhere (unzip it first if you received a zip) and run `PomodoroTimer.App` from a terminal:
+
+```bash
+cd linux-x64
+./PomodoroTimer.App
+```
+
+If it doesn't start, the file may have lost its "executable" permission while being copied or unzipped. Restore it once with `chmod +x PomodoroTimer.App`.
+
+#### Showing the app icon in the Ubuntu dock
+
+Ubuntu shows a generic icon in the dock and in Alt-Tab until the app has a launcher entry. If you have the project's source code, run this once to add one:
+
+```bash
+./scripts/install-desktop-entry.sh /path/to/linux-x64/PomodoroTimer.App
+```
+
+"Pomodoro Timer" then appears in your app grid with its hourglass icon, and you can pin it to the dock. Run the command again if you move the folder. See [HOWTO.md](HOWTO.md#showing-the-app-icon-on-ubuntu) for details.
 
 ### Your data
 
 Your history is stored in one file on your computer:
 
-```
-%LOCALAPPDATA%\PomodoroTimer\pomodoro.db
-```
+| System | Location |
+|---|---|
+| Windows | `%LOCALAPPDATA%\PomodoroTimer\pomodoro.db` |
+| Ubuntu | `~/.local/share/PomodoroTimer/pomodoro.db` |
 
 If you turn on sync, a copy of this file is also kept in your Google Drive. Nothing else is uploaded. The same folder on your computer also holds:
 
@@ -74,5 +109,7 @@ If you turn on sync, a copy of this file is also kept in your Google Drive. Noth
 | `google-token` | Your Google sign-in for this computer. Delete this folder to sign out. |
 | `pomodoro-<date>.log` | Daily log files. The last 14 are kept. |
 | `pomodoro.db.bak-<date-time>` | Backups made before your data is replaced by a download. The last five are kept. |
+
+On Ubuntu, `~/.local/share` is a hidden folder. In the Files app, press **Ctrl+H** to show hidden folders.
 
 Each user account on a computer has its own history. To start fresh, close the app and delete `pomodoro.db`. If you use sync, also delete `sync-state.json` here and the `PomodoroTimer` folder in your Google Drive. Otherwise the app downloads your history again.
