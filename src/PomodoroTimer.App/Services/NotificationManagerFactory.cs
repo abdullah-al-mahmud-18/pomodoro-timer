@@ -1,4 +1,5 @@
 using System;
+using System.Threading.Tasks;
 using DesktopNotifications;
 using DesktopNotifications.FreeDesktop;
 using Serilog;
@@ -39,7 +40,14 @@ public static class NotificationManagerFactory
             {
                 var context = FreeDesktopApplicationContext.FromCurrentProcess();
                 var manager = new FreeDesktopNotificationManager(context);
-                manager.Initialize().GetAwaiter().GetResult();
+                // Called on the UI thread: blocking on Initialize() directly deadlocks, because the D-Bus
+                // continuation tries to resume on the (blocked) UI thread. Run it on the thread pool instead,
+                // and bound it so an unresponsive D-Bus session can't hang startup.
+                if (!Task.Run(() => manager.Initialize()).Wait(TimeSpan.FromSeconds(5)))
+                {
+                    Log.Warning("Notification backend didn't respond; completion notifications are disabled");
+                    return null;
+                }
                 return manager;
             }
         }
