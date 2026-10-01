@@ -43,8 +43,8 @@ Close the app before rebuilding. On Windows a running copy locks its output file
 
 A local run is a Debug build, and it keeps its data apart from the published app (see [Data model](README.md#data-model)):
 
-- Local files go to a separate dev folder: `%LOCALAPPDATA%\PomodoroTimer-Dev\` on Windows or `~/.local/share/PomodoroTimer-Dev/` on Linux. That folder holds the dev `pomodoro.db`, `sync-state.json`, `google-token/`, logs, and backups.
-- Sync uses `pomodoro-dev.db` in the same `PomodoroTimer` folder in Google Drive. The real `pomodoro.db` there is never read or written by a dev run.
+- Local files go to a separate dev folder: `%LOCALAPPDATA%\PomodoroTimer-Dev\` on Windows or `~/.local/share/PomodoroTimer-Dev/` on Linux. That folder holds the dev `pomodoro.db`, `names.txt`, the sync state files, `google-token/`, logs, and backups.
+- Sync uses `pomodoro-dev.db` and `names-dev.txt` in the same `PomodoroTimer` folder in Google Drive. The real `pomodoro.db` and `names.txt` there are never read or written by a dev run.
 
 The first dev run asks you to sign in to Google once (the dev token is stored separately). To start from an empty dev history, close the app and delete `pomodoro.db` in the dev folder. If sync is set up and `pomodoro-dev.db` exists in Google Drive, the next launch downloads it again. To start completely fresh, also delete the dev folder's `sync-state.json` and `pomodoro-dev.db` in Google Drive. Leave the real `pomodoro.db` there alone.
 
