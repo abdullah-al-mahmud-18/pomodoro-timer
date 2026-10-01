@@ -9,7 +9,7 @@ A cross-platform Pomodoro / timer & stopwatch desktop app built with Avalonia UI
 - **Timer** — counts down from a duration you set, with a live progress bar. Can be paused, resumed, and stopped.
 - **Stopwatch** — counts up with no fixed duration. Can be paused, resumed, and stopped.
 - **Custom durations** — set any hours/minutes/seconds combination, with a name, for either mode. The duration boxes accept digits only; letters and symbols are ignored as you type or paste.
-- **Mode** — every session is tagged Work, Study, or Break; a mode must be selected before starting. Mode and Name are cleared when a session ends, ready for the next one.
+- **Mode** — every session is tagged Work, Study, or Break; a mode must be selected and a name entered before starting. Mode and Name are cleared when a session ends, ready for the next one.
 - **Time display** — always `HH:MM:SS` (e.g. `00:25:00`), whether idle, running, or paused.
 - **History** — every completed or stopped session is logged with name, mode, category, duration, status, and timestamps.
   - Filters: **Type** (All / Timer / Stopwatch), **Mode** (All / Work / Study / Break), **Session** (All / Completed / Stopped early), and **Period** (All / Last 7 days / Last 14 days / Last 1 month / Last 3 months / Last 6 months / Last 1 year — rolling windows of 7, 14, 30, 90, 180, and 365 days). Filters reset to All / All / All / Last 7 days each time the page is opened.

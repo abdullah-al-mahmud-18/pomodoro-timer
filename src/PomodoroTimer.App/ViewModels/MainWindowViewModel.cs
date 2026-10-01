@@ -267,7 +267,13 @@ public class MainWindowViewModel : ViewModelBase
             return;
         }
 
-        var name = string.IsNullOrWhiteSpace(SessionName) ? DefaultName() : SessionName.Trim();
+        if (string.IsNullOrWhiteSpace(SessionName))
+        {
+            ErrorMessage = "Enter a name before starting.";
+            return;
+        }
+
+        var name = SessionName.Trim();
         var mode = IsTimerMode ? TimerMode.Timer : TimerMode.Stopwatch;
 
         if (mode == TimerMode.Timer && CustomDuration <= TimeSpan.Zero)
