@@ -23,15 +23,17 @@ namespace PomodoroTimer.App.Services;
 /// The single pomodoro.db file in the user's Google Drive, tagged with appProperties { pomodoroSync: primary }
 /// and kept in a PomodoroTimer folder (tagged { pomodoroSync: folder }) that the app creates.
 /// Only whole-file upload/download — the database is never accessed over the network.
+/// Debug builds use pomodoro-dev.db tagged { pomodoroSync: dev } in the same folder, so development syncs never
+/// find, update, or download the real file.
 /// </summary>
 public sealed class GoogleDriveFileStore : ICloudFileStore, IDisposable
 {
-    private const string FileName = "pomodoro.db";
+    private const string FileName = AppPaths.IsDevelopment ? "pomodoro-dev.db" : "pomodoro.db";
     private const string MimeType = "application/x-sqlite3";
     private const string FolderName = "PomodoroTimer";
     private const string FolderMimeType = "application/vnd.google-apps.folder";
     private const string AppPropertyKey = "pomodoroSync";
-    private const string AppPropertyValue = "primary";
+    private const string AppPropertyValue = AppPaths.IsDevelopment ? "dev" : "primary";
     private const string FolderPropertyValue = "folder";
     private const string FileFields = "id, md5Checksum, trashed, parents";
 

@@ -105,7 +105,7 @@ The database file lives at:
 - Windows: `%LOCALAPPDATA%\PomodoroTimer\pomodoro.db`
 - Linux: `~/.local/share/PomodoroTimer/pomodoro.db`
 
-The path depends only on the user account, not on where the app runs from, so a local development build and a published build on the same machine share the same history.
+The path depends only on the user account, not on where the app runs from. Debug builds (`dotnet run`, `scripts/run.*`) use a separate `PomodoroTimer-Dev` folder next to it, with their own database, sync state, sign-in token, logs, and backups, so development never touches the real history. In Google Drive, a Debug build syncs `pomodoro-dev.db` (tagged `{ "pomodoroSync": "dev" }`) in the same `PomodoroTimer` folder and never sees the real `pomodoro.db`.
 
 ### Files in the app directory
 

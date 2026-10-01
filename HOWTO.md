@@ -41,9 +41,14 @@ dotnet run --project src/PomodoroTimer.App/PomodoroTimer.App.csproj -f net10.0
 
 Close the app before rebuilding. On Windows a running copy locks its output files, and `dotnet build` fails with `MSB3027: Could not copy ... The file is locked by: "PomodoroTimer.App"`.
 
-A local run uses the same database as any published build on the machine (see [Data model](README.md#data-model)), so sessions you record while testing show up in the published app too. To start from an empty history, close the app and delete `pomodoro.db`; it's recreated on the next launch. If sync is set up and a copy exists in Google Drive, the next launch downloads it again. To start completely fresh, also delete `sync-state.json` and the `PomodoroTimer` folder (which holds `pomodoro.db`) in Google Drive.
+A local run is a Debug build, and it keeps its data apart from the published app (see [Data model](README.md#data-model)):
 
-Log files (`pomodoro-<date>.log`) are written to the same folder as `pomodoro.db`.
+- Local files go to a separate dev folder: `%LOCALAPPDATA%\PomodoroTimer-Dev\` on Windows or `~/.local/share/PomodoroTimer-Dev/` on Linux. That folder holds the dev `pomodoro.db`, `sync-state.json`, `google-token/`, logs, and backups.
+- Sync uses `pomodoro-dev.db` in the same `PomodoroTimer` folder in Google Drive. The real `pomodoro.db` there is never read or written by a dev run.
+
+The first dev run asks you to sign in to Google once (the dev token is stored separately). To start from an empty dev history, close the app and delete `pomodoro.db` in the dev folder. If sync is set up and `pomodoro-dev.db` exists in Google Drive, the next launch downloads it again. To start completely fresh, also delete the dev folder's `sync-state.json` and `pomodoro-dev.db` in Google Drive. Leave the real `pomodoro.db` there alone.
+
+Log files (`pomodoro-<date>.log`) are written to the same folder as the database in use. The first log line of each run shows whether it's a development or release build and which folder it uses.
 
 ## Setting up Google Drive sync
 

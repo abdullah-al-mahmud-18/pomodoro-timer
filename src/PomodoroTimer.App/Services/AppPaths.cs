@@ -6,12 +6,20 @@ namespace PomodoroTimer.App.Services;
 /// <summary>
 /// The per-user app directory (the folder holding pomodoro.db) and every file the app keeps there.
 /// Windows: %LOCALAPPDATA%\PomodoroTimer. Linux: ~/.local/share/PomodoroTimer.
+/// Debug builds (dotnet run, scripts/run.*) use a separate PomodoroTimer-Dev folder instead, so development never
+/// touches the real history, sync state, token, or backups of a published build on the same machine.
 /// </summary>
 public static class AppPaths
 {
+#if DEBUG
+    public const bool IsDevelopment = true;
+#else
+    public const bool IsDevelopment = false;
+#endif
+
     public static string AppDirectory { get; } = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-        "PomodoroTimer");
+        IsDevelopment ? "PomodoroTimer-Dev" : "PomodoroTimer");
 
     public static string DatabasePath => Path.Combine(AppDirectory, "pomodoro.db");
 

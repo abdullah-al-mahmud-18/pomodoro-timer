@@ -24,8 +24,9 @@ internal static class Program
 
         try
         {
-            Log.Information("Pomodoro Timer starting (version {Version}, {OS})",
-                typeof(Program).Assembly.GetName().Version, Environment.OSVersion);
+            Log.Information("Pomodoro Timer starting (version {Version}, {OS}, {Build} build, app directory {AppDirectory})",
+                typeof(Program).Assembly.GetName().Version, Environment.OSVersion,
+                AppPaths.IsDevelopment ? "development" : "release", AppPaths.AppDirectory);
             BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
             Log.Information("Pomodoro Timer exited");
         }
