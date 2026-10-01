@@ -1,4 +1,5 @@
 using System;
+using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
@@ -21,6 +22,7 @@ public class App : Application
     private SoundService? _soundService;
     private INotificationManager? _notificationManager;
     private bool _shutdownSyncStarted;
+    private bool _closePromptOpen;
     private bool _readyToClose;
 
     public override void Initialize()
@@ -113,7 +115,10 @@ public class App : Application
         _window.HideBusyOverlay();
     }
 
-    /// <summary>Cancels the first close, uploads local changes (bounded by a timeout), then closes for real.</summary>
+    /// <summary>
+    /// Cancels the first close. If a timer/stopwatch is in progress, asks before stopping it; then saves it, uploads
+    /// local changes (bounded by a timeout), and closes for real.
+    /// </summary>
     private async void OnMainWindowClosing(object? sender, WindowClosingEventArgs e)
     {
         if (_readyToClose)
@@ -122,12 +127,36 @@ public class App : Application
         }
 
         e.Cancel = true;
-        if (_shutdownSyncStarted)
+        if (_shutdownSyncStarted || _closePromptOpen)
         {
             return;
         }
 
+        try
+        {
+            // The OS is shutting down or logging off and won't wait for an answer: just save and sync.
+            if (e.CloseReason != WindowCloseReason.OSShutdown && !await ConfirmCloseWithSessionInProgressAsync())
+            {
+                return;
+            }
+        }
+        catch (Exception ex)
+        {
+            // If the prompt itself fails, fall through to saving and closing rather than leaving the window stuck.
+            Log.Error(ex, "Couldn't show the close prompt");
+        }
+
         _shutdownSyncStarted = true;
+        try
+        {
+            // Save a running/paused session first (as if Stop was pressed) so the shutdown sync uploads it.
+            (_window!.DataContext as MainWindowViewModel)?.SaveSessionInProgress();
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Couldn't save the session in progress at close");
+        }
+
         try
         {
             _window!.ShowBusyOverlay("Syncing…");
@@ -141,6 +170,34 @@ public class App : Application
         {
             _readyToClose = true;
             _window?.Close();
+        }
+    }
+
+    /// <summary>
+    /// "A timer is running — stop and close?" Returns true to go ahead (also when no session is in progress), false
+    /// to cancel the close and keep the session going.
+    /// </summary>
+    private async Task<bool> ConfirmCloseWithSessionInProgressAsync()
+    {
+        if (_window!.DataContext is not MainWindowViewModel { SessionInProgressDescription: { } description } viewModel)
+        {
+            return true;
+        }
+
+        _closePromptOpen = true;
+        try
+        {
+            var choice = await MessageDialog.ShowAsync(_window, $"{description} — stop and close?",
+                viewModel.SessionInProgressCloseMessage!, "Stop and close", "Keep running");
+
+            // Only an explicit "Stop and close" closes; "Keep running" or closing the dialog keeps the session going.
+            var close = choice == 0;
+            Log.Information("Close requested with a session in progress; user chose {Choice}", close ? "stop and close" : "keep running");
+            return close;
+        }
+        finally
+        {
+            _closePromptOpen = false;
         }
     }
 

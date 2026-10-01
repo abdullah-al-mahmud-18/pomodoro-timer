@@ -18,12 +18,16 @@ public class SyncStatusViewModel : ViewModelBase
     public SyncStatusViewModel()
     {
         ActionCommand = new RelayCommand(() => _ = RunActionAsync(), () => IsActionVisible);
+        SyncNowCommand = new RelayCommand(() => _ = RunActionAsync(), () => !_isBusy);
     }
 
-    /// <summary>What the action button does. Set by <see cref="SyncCoordinator"/>.</summary>
+    /// <summary>What the action button and the Sync button do. Set by <see cref="SyncCoordinator"/>.</summary>
     public Func<Task>? ActionHandler { get; set; }
 
     public RelayCommand ActionCommand { get; }
+
+    /// <summary>The Sync button in the top nav: a full sync (with sign-in if needed), disabled while one is running.</summary>
+    public RelayCommand SyncNowCommand { get; }
 
     public string StatusText
     {
@@ -74,6 +78,7 @@ public class SyncStatusViewModel : ViewModelBase
     {
         OnPropertyChanged(nameof(IsActionVisible));
         ActionCommand.RaiseCanExecuteChanged();
+        SyncNowCommand.RaiseCanExecuteChanged();
     }
 
     private async Task RunActionAsync()

@@ -362,6 +362,37 @@ public class MainWindowViewModel : ViewModelBase
         ResetToConfiguring();
     }
 
+    /// <summary>
+    /// The close prompt's title for a running or paused session, e.g. "A timer is running", or null when no session
+    /// is in progress.
+    /// </summary>
+    public string? SessionInProgressDescription => _engine is null
+        ? null
+        : $"A {(_engine.Mode == TimerMode.Timer ? "timer" : "stopwatch")} is {(IsPaused ? "paused" : "running")}";
+
+    /// <summary>The close prompt's explanation of what closing does to the session in progress.</summary>
+    public string? SessionInProgressCloseMessage => _engine is null
+        ? null
+        : _engine.Mode == TimerMode.Timer
+            ? $"Closing the app stops \"{_engine.Name}\" and saves it to History as stopped early."
+            : $"Closing the app stops \"{_engine.Name}\" and saves it to History.";
+
+    /// <summary>
+    /// Called when the window is closing: a running or paused timer/stopwatch is stopped and saved exactly as if
+    /// Stop had been pressed, so the shutdown sync uploads it. Does nothing when no session is in progress.
+    /// </summary>
+    public void SaveSessionInProgress()
+    {
+        if (_engine is null)
+        {
+            return;
+        }
+
+        Log.Information("Window closing with a {Mode} session in progress ({Name}); saving it before shutdown sync",
+            _engine.Mode, _engine.Name);
+        Stop();
+    }
+
     private void OnTick()
     {
         _engine?.Tick();
@@ -372,6 +403,12 @@ public class MainWindowViewModel : ViewModelBase
     {
         Dispatcher.UIThread.Post(() =>
         {
+            // The session was already saved and reset in the meantime (the window closed just as the timer finished).
+            if (!ReferenceEquals(_engine, sender))
+            {
+                return;
+            }
+
             try
             {
                 _tickTimer.Stop();

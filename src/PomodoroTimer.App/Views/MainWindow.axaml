@@ -77,6 +77,9 @@
                         Content="Dashboard" Command="{Binding ShowDashboardCommand}" />
                 <Button Classes="nav" Classes.active="{Binding IsHistoryViewActive}"
                         Content="History" Command="{Binding ShowHistoryCommand}" />
+                <!-- Not a page: syncs local data with Google Drive now (same as the status bar's Retry / Sign in). -->
+                <Button Classes="nav" Content="Sync" Command="{Binding Sync.SyncNowCommand}"
+                        ToolTip.Tip="Sync your data with Google Drive now" />
             </StackPanel>
         </Grid>
 
