@@ -319,6 +319,105 @@ public class SyncServiceTests : IDisposable
         Assert.Null(new SyncStateStore(_statePath).Load());
     }
 
+    // names.txt goes through the same SyncService with its own file profile and state file.
+
+    private string NamesPath => Path.Combine(_directory, "names.txt");
+
+    private string NamesStatePath => Path.Combine(_directory, "sync-state-names.json");
+
+    private SyncService CreateNamesService() => new(_cloud, new NamesSyncFile(NamesPath), NamesStatePath, clock: () => _now);
+
+    [Fact]
+    public async Task Names_FirstSync_UploadsAndRecordsItsOwnState()
+    {
+        File.WriteAllText(NamesPath, "Reading\nWriting\n");
+        var service = CreateNamesService();
+
+        var plan = await service.PlanAsync(CancellationToken.None);
+        var result = await service.ExecuteAsync(plan, plan.Action, CancellationToken.None);
+
+        Assert.Equal(SyncAction.CreateCloudFile, plan.Action);
+        Assert.Equal(SyncResultKind.Uploaded, result.Kind);
+        Assert.Equal(File.ReadAllBytes(NamesPath), Assert.Single(_cloud.Files).Value);
+        Assert.Equal(SyncService.ComputeMd5(NamesPath), new SyncStateStore(NamesStatePath).Load()!.SyncedMd5);
+        Assert.False(File.Exists(_statePath));
+    }
+
+    [Fact]
+    public async Task Names_NewDevice_WithEmptyLocalFile_Downloads()
+    {
+        var cloudId = _cloud.Seed("Reading\nWriting\n"u8.ToArray());
+        File.WriteAllText(NamesPath, "\n  \n");
+        var service = CreateNamesService();
+
+        var plan = await service.PlanAsync(CancellationToken.None);
+        var result = await service.ExecuteAsync(plan, plan.Action, CancellationToken.None);
+
+        Assert.Equal(SyncAction.Download, plan.Action);
+        Assert.Equal(SyncResultKind.Downloaded, result.Kind);
+        Assert.Equal(_cloud.Files[cloudId], File.ReadAllBytes(NamesPath));
+    }
+
+    [Fact]
+    public async Task Names_NewDevice_WithLocalNames_IsConflict()
+    {
+        _cloud.Seed("Reading\n"u8.ToArray());
+        File.WriteAllText(NamesPath, "Writing\n");
+
+        var plan = await CreateNamesService().PlanAsync(CancellationToken.None);
+
+        Assert.Equal(SyncAction.Conflict, plan.Action);
+    }
+
+    [Fact]
+    public async Task Names_CloudNewer_BacksUpLocalThenDownloads()
+    {
+        File.WriteAllText(NamesPath, "Reading\n");
+        var service = CreateNamesService();
+        var first = await service.PlanAsync(CancellationToken.None);
+        await service.ExecuteAsync(first, first.Action, CancellationToken.None);
+        var cloudId = new SyncStateStore(NamesStatePath).Load()!.FileId;
+        _cloud.Files[cloudId] = "Reading\nAdded elsewhere\n"u8.ToArray();
+
+        var plan = await service.PlanAsync(CancellationToken.None);
+        var result = await service.ExecuteAsync(plan, plan.Action, CancellationToken.None);
+
+        Assert.Equal(SyncAction.Download, plan.Action);
+        Assert.Equal("Reading\nAdded elsewhere\n", File.ReadAllText(NamesPath));
+        Assert.Equal(NamesPath + ".bak-20260927-100000", result.BackupPath);
+        Assert.Equal("Reading\n", File.ReadAllText(result.BackupPath!));
+    }
+
+    [Fact]
+    public async Task Names_EditedLocally_CloudUnchanged_UploadsOnShutdown()
+    {
+        File.WriteAllText(NamesPath, "Reading\n");
+        var service = CreateNamesService();
+        var plan = await service.PlanAsync(CancellationToken.None);
+        await service.ExecuteAsync(plan, plan.Action, CancellationToken.None);
+        File.WriteAllText(NamesPath, "Reading\nWriting\n");
+
+        var result = await service.UploadOnShutdownAsync(CancellationToken.None);
+
+        Assert.Equal(SyncResultKind.Uploaded, result.Kind);
+        Assert.Equal(File.ReadAllBytes(NamesPath), Assert.Single(_cloud.Files).Value);
+    }
+
+    [Fact]
+    public async Task Names_BinaryDownload_FailsVerification_LeavesLocalFileUntouched()
+    {
+        _cloud.Seed(new byte[] { 0x52, 0x00, 0xFF, 0xFE });
+        File.WriteAllText(NamesPath, "");
+        var service = CreateNamesService();
+
+        var plan = await service.PlanAsync(CancellationToken.None);
+        var result = await service.ExecuteAsync(plan, plan.Action, CancellationToken.None);
+
+        Assert.Equal(SyncResultKind.DownloadVerificationFailed, result.Kind);
+        Assert.Equal("", File.ReadAllText(NamesPath));
+        Assert.Null(new SyncStateStore(NamesStatePath).Load());
+    }
+
     /// <summary>Puts this device in a clean "synced" state: local db with the given sessions, uploaded, state recorded.</summary>
     private async Task SyncedDevice(params string[] sessionNames)
     {
