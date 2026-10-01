@@ -2,7 +2,7 @@ using PomodoroTimer.Core.Models;
 
 namespace PomodoroTimer.App.ViewModels;
 
-/// <summary>One labeled row of the Dashboard: a period label plus Work/Study/Break durations formatted for display.</summary>
+/// <summary>One labeled row of the Dashboard: a period label plus Work/Study/Break durations or percentages formatted for display.</summary>
 public class DashboardRowViewModel
 {
     public DashboardRowViewModel(string label, CategoryTotals totals)
@@ -11,6 +11,15 @@ public class DashboardRowViewModel
         WorkDisplay = FormatDuration(totals.WorkSeconds);
         StudyDisplay = FormatDuration(totals.StudySeconds);
         BreakDisplay = FormatDuration(totals.BreakSeconds);
+    }
+
+    /// <summary>A ratio row. A null ratio (no time recorded in the period) shows a dash in every column.</summary>
+    public DashboardRowViewModel(string label, CategoryRatio? ratio)
+    {
+        Label = label;
+        WorkDisplay = ratio is null ? "—" : $"{ratio.WorkPercent}%";
+        StudyDisplay = ratio is null ? "—" : $"{ratio.StudyPercent}%";
+        BreakDisplay = ratio is null ? "—" : $"{ratio.BreakPercent}%";
     }
 
     public string Label { get; }

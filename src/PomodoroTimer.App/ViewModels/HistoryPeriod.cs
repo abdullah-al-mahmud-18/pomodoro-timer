@@ -6,6 +6,7 @@ public enum HistoryPeriod
     Last7Days,
     Last14Days,
     Last30Days,
+    Last90Days,
     Last180Days,
     Last365Days,
     All

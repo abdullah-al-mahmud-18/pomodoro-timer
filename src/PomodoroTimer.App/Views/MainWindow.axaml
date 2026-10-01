@@ -312,6 +312,23 @@
                     </Border>
                 </StackPanel>
 
+                <StackPanel Spacing="8">
+                    <TextBlock Text="Ratio" FontSize="18" FontWeight="Bold" />
+                    <Border BorderBrush="#33FFFFFF" BorderThickness="1" CornerRadius="6" ClipToBounds="True">
+                        <StackPanel>
+                            <Border Background="#1E1E2E" Padding="16,8">
+                                <Grid Classes="dashColumns dashHeader" ColumnDefinitions="200,120,120,120">
+                                    <TextBlock Grid.Column="0" Text="Period" />
+                                    <TextBlock Grid.Column="1" Classes="value" Text="Work" />
+                                    <TextBlock Grid.Column="2" Classes="value" Text="Study" />
+                                    <TextBlock Grid.Column="3" Classes="value" Text="Break" />
+                                </Grid>
+                            </Border>
+                            <ItemsControl Classes="dashRows" ItemsSource="{Binding RatioRows}" />
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+
             </StackPanel>
         </ScrollViewer>
 

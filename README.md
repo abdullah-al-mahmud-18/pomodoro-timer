@@ -12,10 +12,10 @@ A cross-platform Pomodoro / timer & stopwatch desktop app built with Avalonia UI
 - **Mode** — every session is tagged Work, Study, or Break; a mode must be selected before starting. Mode and Name are cleared when a session ends, ready for the next one.
 - **Time display** — always `HH:MM:SS` (e.g. `00:25:00`), whether idle, running, or paused.
 - **History** — every completed or stopped session is logged with name, mode, category, duration, status, and timestamps.
-  - Filters: **Type** (All / Timer / Stopwatch), **Mode** (All / Work / Study / Break), **Session** (All / Completed / Stopped early), and **Period** (All / last 7 / 14 / 30 / 180 / 365 days). Filters reset to All / All / All / Last 7 days each time the page is opened.
+  - Filters: **Type** (All / Timer / Stopwatch), **Mode** (All / Work / Study / Break), **Session** (All / Completed / Stopped early), and **Period** (All / Last 7 days / Last 14 days / Last 1 month / Last 3 months / Last 6 months / Last 1 year — rolling windows of 7, 14, 30, 90, 180, and 365 days). Filters reset to All / All / All / Last 7 days each time the page is opened.
   - Delete a single entry with its bin icon, or delete everything the current filters show with **Delete Filtered Data** (asks "Are you sure?" first).
   - Stopwatch sessions always count as Completed, since a stopwatch has no target to stop short of.
-- **Dashboard** — totals for today and rolling 7/14/30/90/365-day windows, plus daily averages for the 7/14/30/90-day windows, broken down by Work/Study/Break. Reloaded from the database every time the page is opened, and after deletes in History. It always counts all sessions and ignores History's filters.
+- **Dashboard** — totals for today and for the last 7 days, 14 days, 1 month, 3 months, 6 months, and 1 year (rolling 7/14/30/90/180/365-day windows), plus daily averages and a **Ratio** table (each category's share of the recorded time, as percentages that add up to 100) for the same periods, broken down by Work/Study/Break. Reloaded from the database every time the page is opened, and after deletes in History. It always counts all sessions and ignores History's filters.
 - **Navigation** — Timer, Dashboard, and History buttons on every page; the current page is highlighted. A running timer or stopwatch keeps going while you view other pages.
 - **Dark theme** — the app always uses a dark theme, regardless of the OS setting.
 - **Completion notification** — when a timer reaches zero, you get a native OS toast notification and a completion sound. (Stopwatch sessions end via Stop, since counting up has no natural completion point.)
@@ -73,7 +73,7 @@ This also means the app multi-targets two TFMs:
 PomodoroTimer.slnx
 src/
   PomodoroTimer.Core/       UI-agnostic domain logic (testable in isolation)
-    Models/                 Session, TimerMode, SessionCategory, CategoryTotals, DashboardReport
+    Models/                 Session, TimerMode, SessionCategory, CategoryTotals, CategoryRatio, DashboardReport
     Data/                   Database, SessionRepository (Microsoft.Data.Sqlite)
     Services/               TimerEngine (countdown/count-up/pause/resume/complete state machine),
                              DashboardService (totals + daily averages per category and time window)

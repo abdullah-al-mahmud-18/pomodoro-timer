@@ -60,9 +60,10 @@ public class HistoryViewModel : ViewModelBase
             new("All", HistoryPeriod.All),
             new("Last 7 days", HistoryPeriod.Last7Days),
             new("Last 14 days", HistoryPeriod.Last14Days),
-            new("Last 30 days", HistoryPeriod.Last30Days),
-            new("Last 180 days", HistoryPeriod.Last180Days),
-            new("Last 365 days", HistoryPeriod.Last365Days)
+            new("Last 1 month", HistoryPeriod.Last30Days),
+            new("Last 3 months", HistoryPeriod.Last90Days),
+            new("Last 6 months", HistoryPeriod.Last180Days),
+            new("Last 1 year", HistoryPeriod.Last365Days)
         };
 
         _selectedType = TypeOptions[0];
@@ -232,6 +233,7 @@ public class HistoryViewModel : ViewModelBase
         HistoryPeriod.Last7Days => 7,
         HistoryPeriod.Last14Days => 14,
         HistoryPeriod.Last30Days => 30,
+        HistoryPeriod.Last90Days => 90,
         HistoryPeriod.Last180Days => 180,
         HistoryPeriod.Last365Days => 365,
         _ => throw new ArgumentOutOfRangeException(nameof(period))

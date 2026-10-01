@@ -107,6 +107,37 @@ public class DashboardServiceTests
     }
 
     [Fact]
+    public void Last180Days_IncludesSessionsInsideWindowOnly()
+    {
+        var sessions = new[]
+        {
+            MakeSession(SessionCategory.Break, secondsAgoFromNow: (int)TimeSpan.FromDays(100).TotalSeconds, durationSeconds: 1800), // within window
+            MakeSession(SessionCategory.Break, secondsAgoFromNow: (int)TimeSpan.FromDays(200).TotalSeconds, durationSeconds: 9999) // outside window
+        };
+
+        var service = new DashboardService(() => Now);
+        var report = service.BuildReport(sessions);
+
+        Assert.Equal(0, report.Last90Days.BreakSeconds);
+        Assert.Equal(1800, report.Last180Days.BreakSeconds);
+        Assert.Equal(10, report.AveragePerDayLast180Days.BreakSeconds);
+    }
+
+    [Fact]
+    public void AveragePerDayLast365Days_DividesBy365()
+    {
+        var sessions = new[]
+        {
+            MakeSession(SessionCategory.Study, secondsAgoFromNow: (int)TimeSpan.FromDays(300).TotalSeconds, durationSeconds: 3650)
+        };
+
+        var service = new DashboardService(() => Now);
+        var report = service.BuildReport(sessions);
+
+        Assert.Equal(10, report.AveragePerDayLast365Days.StudySeconds);
+    }
+
+    [Fact]
     public void NoSessions_ProducesAllZeroes()
     {
         var service = new DashboardService(() => Now);

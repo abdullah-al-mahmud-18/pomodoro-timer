@@ -27,12 +27,15 @@ public class DashboardService
             Last14Days = TotalsSince(sessions, today.AddDays(-13)),
             Last30Days = TotalsSince(sessions, today.AddDays(-29)),
             Last90Days = TotalsSince(sessions, today.AddDays(-89)),
+            Last180Days = TotalsSince(sessions, today.AddDays(-179)),
             Last365Days = TotalsSince(sessions, today.AddDays(-364)),
 
             AveragePerDayLast7Days = Average(TotalsSince(sessions, today.AddDays(-6)), 7),
             AveragePerDayLast14Days = Average(TotalsSince(sessions, today.AddDays(-13)), 14),
             AveragePerDayLast30Days = Average(TotalsSince(sessions, today.AddDays(-29)), 30),
-            AveragePerDayLast90Days = Average(TotalsSince(sessions, today.AddDays(-89)), 90)
+            AveragePerDayLast90Days = Average(TotalsSince(sessions, today.AddDays(-89)), 90),
+            AveragePerDayLast180Days = Average(TotalsSince(sessions, today.AddDays(-179)), 180),
+            AveragePerDayLast365Days = Average(TotalsSince(sessions, today.AddDays(-364)), 365)
         };
     }
 

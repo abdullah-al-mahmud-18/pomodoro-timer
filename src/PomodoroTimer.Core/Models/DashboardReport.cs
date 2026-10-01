@@ -12,10 +12,13 @@ public class DashboardReport
     public required CategoryTotals Last14Days { get; init; }
     public required CategoryTotals Last30Days { get; init; }
     public required CategoryTotals Last90Days { get; init; }
+    public required CategoryTotals Last180Days { get; init; }
     public required CategoryTotals Last365Days { get; init; }
 
     public required CategoryTotals AveragePerDayLast7Days { get; init; }
     public required CategoryTotals AveragePerDayLast14Days { get; init; }
     public required CategoryTotals AveragePerDayLast30Days { get; init; }
     public required CategoryTotals AveragePerDayLast90Days { get; init; }
+    public required CategoryTotals AveragePerDayLast180Days { get; init; }
+    public required CategoryTotals AveragePerDayLast365Days { get; init; }
 }
