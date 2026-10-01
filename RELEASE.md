@@ -1,20 +1,53 @@
 # Release notes
 
-## 2.0.1 — 2026-09-30
+## 2.1.2 — 2026-10-01
 
-Pomodoro Timer 2.0.1 brings version 2.0 to **Ubuntu 24.04** and fixes two problems that affected the app on Ubuntu. Windows 11 behaves the same as in 2.0.0, released on 2026-09-28. If you already run 2.0.0 on Windows, you don't need to update.
-
-Pomodoro Timer 2.0 lets you keep the same history on more than one computer, such as a laptop and a desktop PC, by syncing it through your own Google Drive. It also handles problems more gracefully and keeps log files to help track them down. Everything from 1.0 works as before, and sync is optional: if you don't turn it on, the app stays fully offline.
+Pomodoro Timer 2.1.2 adds a **Ratio** table to the Dashboard. The table shows how your time splits between work, study, and breaks. This release also adds a 6-month period and renames the periods on the Dashboard and History pages to read more naturally. Everything else works as in 2.0.1, including Google Drive sync, and your history carries over unchanged.
 
 This release is for **Windows 11** and **Ubuntu 24.04**. Both have the same features and share one history format. You can sync a Windows PC and an Ubuntu laptop through the same Google account.
 
-### Fixed on Ubuntu
+### What's new in 2.1.2
+
+**Ratio table on the Dashboard**
+
+- A new **Ratio** table appears below **Daily averages**. For each period, it shows what share of your recorded time went to Work, Study, and Break, for example 50% / 20% / 30%.
+- The three percentages in a row always add up to 100%.
+- A period with no recorded time shows **—** instead of percentages.
+
+**Clearer period names**
+
+The Dashboard and History pages now use the same six periods:
+
+| Before | Now |
+|---|---|
+| Last 7 days | Last 7 days |
+| Last 14 days | Last 14 days |
+| Last 30 days | Last 1 month |
+| Last 90 days | Last 3 months |
+| Last 180 days | Last 6 months |
+| Last 365 days | Last 1 year |
+
+The periods still count back a fixed number of days from today. For example, **Last 1 month** is the last 30 days, not the current calendar month.
+
+**More periods in each table**
+
+- **Totals** now includes **Last 6 months**.
+- **Daily averages** now includes **Last 6 months** and **Last 1 year**. Before, it stopped at 3 months.
+- The **Period** filter on the History page now includes **Last 3 months**.
+
+**For developers**
+
+If you build the app from source, a development build (`dotnet run` or `scripts/run.*`) now keeps its own history. It no longer shares the history of the app you use day to day. Its files go to a separate `PomodoroTimer-Dev` folder. In Google Drive, it syncs `pomodoro-dev.db` in the same `PomodoroTimer` folder and never touches your real `pomodoro.db`. The first development run asks you to sign in to Google once. Published builds are not affected. See [HOWTO.md](HOWTO.md#running-locally).
+
+### Earlier fixes on Ubuntu (2.0.1)
 
 - **The app no longer freezes at startup.** The window stayed on **Syncing…** and never opened your timer or history. It now opens normally, whether or not sync is set up.
 - **The app can now show its hourglass icon in the dock and Alt-Tab.** Ubuntu showed a generic icon instead. Adding a launcher entry once fixes this. See [Showing the app icon in the Ubuntu dock](#showing-the-app-icon-in-the-ubuntu-dock).
 - If the desktop's notification service doesn't respond, the app now starts anyway, with completion notifications turned off, instead of waiting indefinitely.
 
 ### What's new in 2.0
+
+Pomodoro Timer 2.0 lets you keep the same history on more than one computer, such as a laptop and a desktop PC, by syncing it through your own Google Drive. It also handles problems more gracefully and keeps log files to help track them down. Everything from 1.0 works as before, and sync is optional: if you don't turn it on, the app stays fully offline.
 
 **Now on Ubuntu**
 
@@ -58,9 +91,10 @@ If both computers have changes the other doesn't have, the app asks what to do:
 
 For sync to work, the app folder needs a `client_secret.json` file, which links the app to a Google Cloud project. If the file is missing, the title bar shows **Sync not configured** and the app works offline as before. [HOWTO.md](HOWTO.md#setting-up-google-drive-sync) explains how to create the Google Cloud project and the file. You do this once. The same file works for both Windows and Ubuntu, so copy it into each computer's app folder.
 
-### Upgrading from 1.0 or 2.0.0
+### Upgrading
 
-- Your history carries over. Replace the old app folder with the new one and leave your data file where it is.
+- **From 2.0.0 or 2.0.1:** replace the old app folder with the new one. Keep your `client_secret.json` and copy it into the new folder if you use sync. Your history, sync settings, and Google sign-in carry over.
+- **From 1.0:** your history carries over. Replace the old app folder with the new one and leave your data file where it is.
 - **If you use more than one computer:** sign in on the computer whose history you want to keep first. Its history is uploaded to Google Drive. When you then sign in on a second computer that already has sessions of its own, the app asks which history to keep. Sessions from 1.0 on different computers can't be combined.
 
 ### Download and run
