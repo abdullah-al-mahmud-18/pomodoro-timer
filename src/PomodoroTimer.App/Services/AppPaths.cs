@@ -23,8 +23,14 @@ public static class AppPaths
 
     public static string DatabasePath => Path.Combine(AppDirectory, "pomodoro.db");
 
-    /// <summary>Per-device sync bookkeeping. Never uploaded.</summary>
+    /// <summary>Session names the user can pick, one per line. Edited by the user; synced like the db.</summary>
+    public static string NamesPath => Path.Combine(AppDirectory, "names.txt");
+
+    /// <summary>Per-device sync bookkeeping for the db. Never uploaded.</summary>
     public static string SyncStatePath => Path.Combine(AppDirectory, "sync-state.json");
+
+    /// <summary>Per-device sync bookkeeping for names.txt. Never uploaded.</summary>
+    public static string NamesSyncStatePath => Path.Combine(AppDirectory, "sync-state-names.json");
 
     /// <summary>OAuth refresh token folder. Never uploaded, never logged.</summary>
     public static string GoogleTokenDirectory => Path.Combine(AppDirectory, "google-token");

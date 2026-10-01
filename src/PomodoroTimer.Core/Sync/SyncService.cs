@@ -1,6 +1,5 @@
 using System.Globalization;
 using System.Security.Cryptography;
-using Microsoft.Data.Sqlite;
 using Serilog;
 
 namespace PomodoroTimer.Core.Sync;
@@ -37,8 +36,9 @@ public enum SyncResultKind
 public sealed record SyncResult(SyncResultKind Kind, string? BackupPath = null);
 
 /// <summary>
-/// Whole-file sync of the local SQLite db against one cloud file, using content hashes (L = local, C = cloud,
-/// S = last synced) to tell which side changed. Never merges and never overwrites local data without a backup.
+/// Whole-file sync of one local file (the SQLite db, or the names list) against one cloud file, using content
+/// hashes (L = local, C = cloud, S = last synced) to tell which side changed. Never merges and never overwrites
+/// local data without a backup.
 /// </summary>
 public sealed class SyncService
 {
@@ -46,7 +46,7 @@ public sealed class SyncService
     private const string BackupInfix = ".bak-";
 
     private readonly ICloudFileStore _store;
-    private readonly string _databasePath;
+    private readonly SyncedFile _file;
     private readonly SyncStateStore _stateStore;
     private readonly ILocalFileGate _gate;
     private readonly Func<DateTimeOffset> _now;
@@ -57,9 +57,19 @@ public sealed class SyncService
         string statePath,
         ILocalFileGate? gate = null,
         Func<DateTimeOffset>? clock = null)
+        : this(store, new DatabaseSyncFile(databasePath), statePath, gate, clock)
+    {
+    }
+
+    public SyncService(
+        ICloudFileStore store,
+        SyncedFile file,
+        string statePath,
+        ILocalFileGate? gate = null,
+        Func<DateTimeOffset>? clock = null)
     {
         _store = store;
-        _databasePath = databasePath;
+        _file = file;
         _stateStore = new SyncStateStore(statePath);
         _gate = gate ?? new InlineFileGate();
         _now = clock ?? (() => DateTimeOffset.UtcNow);
@@ -67,13 +77,15 @@ public sealed class SyncService
 
     private static ILogger Logger => Log.ForContext<SyncService>();
 
-    private string AppDirectory => Path.GetDirectoryName(Path.GetFullPath(_databasePath))!;
+    private string LocalPath => _file.LocalPath;
+
+    private string AppDirectory => Path.GetDirectoryName(Path.GetFullPath(LocalPath))!;
 
     /// <summary>Gathers L, C, S and the flags, and runs the startup decision table. Changes nothing.</summary>
     public async Task<SyncPlan> PlanAsync(CancellationToken cancellationToken)
     {
         var state = _stateStore.Load();
-        var (localMd5, localHasSessions) = await _gate.RunAsync(InspectLocalDatabase);
+        var (localMd5, localHasContent) = await _gate.RunAsync(InspectLocalFile);
 
         CloudFileInfo? cloud;
         var cloudDeleted = false;
@@ -87,7 +99,7 @@ public sealed class SyncService
             var matches = await _store.FindAsync(cancellationToken);
             if (matches.Count > 1)
             {
-                Logger.Warning("Found {Count} cloud files tagged as the primary database; not guessing which to use", matches.Count);
+                Logger.Warning("Found {Count} cloud files tagged as the {File}; not guessing which to use", matches.Count, _file.DisplayName);
                 return new SyncPlan(SyncAction.AmbiguousCloudFiles, null, null, localMd5, matches.Count);
             }
 
@@ -100,12 +112,12 @@ public sealed class SyncService
             SyncedMd5: state?.SyncedMd5,
             CloudExists: cloud is not null,
             StateExists: state is not null,
-            LocalHasSessions: localHasSessions,
+            LocalHasSessions: localHasContent,
             CloudFileDeleted: cloudDeleted));
 
         Logger.Information(
-            "Sync decision {Action}: L={LocalMd5} C={CloudMd5} S={SyncedMd5} stateExists={StateExists} localHasSessions={LocalHasSessions} cloudDeleted={CloudDeleted}",
-            action, localMd5, cloud?.Md5, state?.SyncedMd5, state is not null, localHasSessions, cloudDeleted);
+            "Sync decision for {File} {Action}: L={LocalMd5} C={CloudMd5} S={SyncedMd5} stateExists={StateExists} localHasContent={LocalHasContent} cloudDeleted={CloudDeleted}",
+            _file.DisplayName, action, localMd5, cloud?.Md5, state?.SyncedMd5, state is not null, localHasContent, cloudDeleted);
 
         return new SyncPlan(action, cloud, state, localMd5, cloud is null ? 0 : 1);
     }
@@ -153,19 +165,19 @@ public sealed class SyncService
         var state = _stateStore.Load();
         var localMd5 = await _gate.RunAsync(() =>
         {
-            SqliteConnection.ClearAllPools();
-            return File.Exists(_databasePath) ? ComputeMd5(_databasePath) : null;
+            _file.Release();
+            return File.Exists(LocalPath) ? ComputeMd5(LocalPath) : null;
         });
 
         if (localMd5 is null)
         {
-            Logger.Information("Shutdown sync: no local database, nothing to upload");
+            Logger.Information("Shutdown sync ({File}): no local file, nothing to upload", _file.DisplayName);
             return new SyncResult(SyncResultKind.NoLocalDatabase);
         }
 
         if (state is not null && SyncDecision.HashEquals(localMd5, state.SyncedMd5))
         {
-            Logger.Information("Shutdown sync: no local changes since last sync (L == S), skipping upload");
+            Logger.Information("Shutdown sync ({File}): no local changes since last sync (L == S), skipping upload", _file.DisplayName);
             return new SyncResult(SyncResultKind.NothingToDo);
         }
 
@@ -183,14 +195,14 @@ public sealed class SyncService
                 return new SyncResult(SyncResultKind.NothingToDo);
             }
 
-            Logger.Warning("Shutdown sync: a cloud database exists but this device has never synced with it; not uploading. The next start will ask what to keep");
+            Logger.Warning("Shutdown sync ({File}): a cloud copy exists but this device has never synced with it; not uploading. The next start will ask what to keep", _file.DisplayName);
             return new SyncResult(SyncResultKind.SkippedCloudChanged);
         }
 
         var cloud = await _store.GetMetadataAsync(state.FileId, cancellationToken);
         if (cloud is null)
         {
-            Logger.Warning("Shutdown sync: cloud file {FileId} no longer exists; not uploading. The next start will ask before re-uploading", state.FileId);
+            Logger.Warning("Shutdown sync ({File}): cloud file {FileId} no longer exists; not uploading. The next start will ask before re-uploading", _file.DisplayName, state.FileId);
             return new SyncResult(SyncResultKind.SkippedCloudMissing);
         }
 
@@ -202,8 +214,8 @@ public sealed class SyncService
 
         if (!SyncDecision.HashEquals(cloud.Md5, state.SyncedMd5))
         {
-            Logger.Warning("Shutdown sync: cloud copy changed since last sync (C={CloudMd5}, S={SyncedMd5}); not uploading. The next start will show the conflict prompt",
-                cloud.Md5, state.SyncedMd5);
+            Logger.Warning("Shutdown sync ({File}): cloud copy changed since last sync (C={CloudMd5}, S={SyncedMd5}); not uploading. The next start will show the conflict prompt",
+                _file.DisplayName, cloud.Md5, state.SyncedMd5);
             return new SyncResult(SyncResultKind.SkippedCloudChanged);
         }
 
@@ -218,19 +230,19 @@ public sealed class SyncService
         // S is the hash of exactly what was uploaded; later local writes make L != S and are uploaded next time.
         var snapshotMd5 = await _gate.RunAsync(() =>
         {
-            if (!File.Exists(_databasePath))
+            if (!File.Exists(LocalPath))
             {
                 return null;
             }
 
-            SqliteConnection.ClearAllPools();
-            File.Copy(_databasePath, snapshotPath, overwrite: true);
+            _file.Release();
+            File.Copy(LocalPath, snapshotPath, overwrite: true);
             return ComputeMd5(snapshotPath);
         });
 
         if (snapshotMd5 is null)
         {
-            Logger.Information("Upload skipped: no local database");
+            Logger.Information("Upload skipped: no local {File}", _file.DisplayName);
             return new SyncResult(SyncResultKind.NoLocalDatabase);
         }
 
@@ -246,8 +258,8 @@ public sealed class SyncService
             }
 
             SaveState(uploaded.Id, snapshotMd5);
-            Logger.Information("Uploaded local database to cloud file {FileId} ({Action}), MD5 {Md5}",
-                uploaded.Id, fileId is null ? "created" : "updated", snapshotMd5);
+            Logger.Information("Uploaded local {File} to cloud file {FileId} ({Action}), MD5 {Md5}",
+                _file.DisplayName, uploaded.Id, fileId is null ? "created" : "updated", snapshotMd5);
             return new SyncResult(SyncResultKind.Uploaded);
         }
         finally
@@ -271,21 +283,21 @@ public sealed class SyncService
             var downloadedMd5 = ComputeMd5(tempPath);
             if (cloud.Md5 is not null && !SyncDecision.HashEquals(downloadedMd5, cloud.Md5))
             {
-                Logger.Error("Downloaded file MD5 {Downloaded} doesn't match cloud MD5 {Cloud}; local database left untouched",
-                    downloadedMd5, cloud.Md5);
+                Logger.Error("Downloaded {File} MD5 {Downloaded} doesn't match cloud MD5 {Cloud}; local file left untouched",
+                    _file.DisplayName, downloadedMd5, cloud.Md5);
                 return new SyncResult(SyncResultKind.DownloadVerificationFailed);
             }
 
-            if (VerifyDatabase(tempPath) is { } problem)
+            if (_file.Verify(tempPath) is { } problem)
             {
-                Logger.Error("Downloaded database failed verification ({Problem}); local database left untouched", problem);
+                Logger.Error("Downloaded {File} failed verification ({Problem}); local file left untouched", _file.DisplayName, problem);
                 return new SyncResult(SyncResultKind.DownloadVerificationFailed);
             }
 
-            var backupPath = await _gate.RunAsync(() => ReplaceLocalDatabase(tempPath));
+            var backupPath = await _gate.RunAsync(() => ReplaceLocalFile(tempPath));
             SaveState(cloud.Id, downloadedMd5);
 
-            Logger.Information("Downloaded cloud file {FileId} over the local database, MD5 {Md5}", cloud.Id, downloadedMd5);
+            Logger.Information("Downloaded cloud file {FileId} over the local {File}, MD5 {Md5}", cloud.Id, _file.DisplayName, downloadedMd5);
             return new SyncResult(SyncResultKind.Downloaded, backupPath);
         }
         finally
@@ -294,49 +306,41 @@ public sealed class SyncService
         }
     }
 
-    /// <summary>Backs up the current local db (if any), then atomically moves the verified download over it.</summary>
-    private string? ReplaceLocalDatabase(string verifiedPath)
+    /// <summary>Backs up the current local file (if any), then atomically moves the verified download over it.</summary>
+    private string? ReplaceLocalFile(string verifiedPath)
     {
-        SqliteConnection.ClearAllPools();
-
-        // A leftover rollback journal would be applied to the *new* file on next open and corrupt it.
-        foreach (var sidecar in new[] { "-journal", "-wal" })
-        {
-            if (File.Exists(_databasePath + sidecar))
-            {
-                throw new IOException($"Not replacing the local database: {Path.GetFileName(_databasePath + sidecar)} exists, so it may be in use or need recovery.");
-            }
-        }
+        _file.Release();
+        _file.EnsureReplaceable();
 
         string? backupPath = null;
-        if (File.Exists(_databasePath))
+        if (File.Exists(LocalPath))
         {
             backupPath = CreateBackup();
         }
 
-        File.Move(verifiedPath, _databasePath, overwrite: true);
+        File.Move(verifiedPath, LocalPath, overwrite: true);
         RotateBackups();
         return backupPath;
     }
 
-    /// <summary>Copies the local db to pomodoro.db.bak-&lt;yyyyMMdd-HHmmss&gt; (UTC). Keeps the newest <see cref="BackupsToKeep"/>.</summary>
+    /// <summary>Copies the local file to e.g. pomodoro.db.bak-&lt;yyyyMMdd-HHmmss&gt; (UTC). Keeps the newest <see cref="BackupsToKeep"/>.</summary>
     public string CreateBackup()
     {
         var stamp = _now().UtcDateTime.ToString("yyyyMMdd-HHmmss", CultureInfo.InvariantCulture);
-        var backupPath = _databasePath + BackupInfix + stamp;
+        var backupPath = LocalPath + BackupInfix + stamp;
         for (var suffix = 1; File.Exists(backupPath); suffix++)
         {
-            backupPath = $"{_databasePath}{BackupInfix}{stamp}-{suffix}";
+            backupPath = $"{LocalPath}{BackupInfix}{stamp}-{suffix}";
         }
 
-        File.Copy(_databasePath, backupPath);
-        Logger.Information("Backed up local database to {BackupPath}", backupPath);
+        File.Copy(LocalPath, backupPath);
+        Logger.Information("Backed up local {File} to {BackupPath}", _file.DisplayName, backupPath);
         return backupPath;
     }
 
     private void RotateBackups()
     {
-        var pattern = Path.GetFileName(_databasePath) + BackupInfix + "*";
+        var pattern = Path.GetFileName(LocalPath) + BackupInfix + "*";
         var stale = Directory.GetFiles(AppDirectory, pattern)
             .OrderByDescending(path => Path.GetFileName(path), StringComparer.Ordinal)
             .Skip(BackupsToKeep);
@@ -355,79 +359,22 @@ public sealed class SyncService
         }
     }
 
-    /// <summary>L plus whether the local db has any sessions. Opening it also rolls back any hot journal from a crash.</summary>
-    private (string? Md5, bool HasSessions) InspectLocalDatabase()
+    /// <summary>L plus whether the local file holds any data.</summary>
+    private (string? Md5, bool HasContent) InspectLocalFile()
     {
-        if (!File.Exists(_databasePath))
+        if (!File.Exists(LocalPath))
         {
             return (null, false);
         }
 
-        bool hasSessions;
-        try
-        {
-            using var connection = new SqliteConnection(new SqliteConnectionStringBuilder
-            {
-                DataSource = _databasePath,
-                Mode = SqliteOpenMode.ReadWrite,
-                Pooling = false
-            }.ToString());
-            connection.Open();
-
-            using var command = connection.CreateCommand();
-            command.CommandText = """
-                SELECT CASE
-                    WHEN NOT EXISTS (SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'Sessions') THEN 0
-                    ELSE (SELECT EXISTS (SELECT 1 FROM Sessions))
-                END;
-                """;
-            hasSessions = Convert.ToInt64(command.ExecuteScalar()) != 0;
-        }
-        catch (SqliteException ex)
-        {
-            // Can't tell — assume it has data, so the worst case is a prompt rather than a silent overwrite.
-            Logger.Warning(ex, "Couldn't check the local database for sessions; treating it as non-empty");
-            hasSessions = true;
-        }
-
-        SqliteConnection.ClearAllPools();
-        return (ComputeMd5(_databasePath), hasSessions);
-    }
-
-    /// <summary>Returns null if the file is a healthy database from this app, otherwise what's wrong with it.</summary>
-    private static string? VerifyDatabase(string path)
-    {
-        try
-        {
-            using var connection = new SqliteConnection(new SqliteConnectionStringBuilder
-            {
-                DataSource = path,
-                Mode = SqliteOpenMode.ReadOnly,
-                Pooling = false
-            }.ToString());
-            connection.Open();
-
-            using var integrity = connection.CreateCommand();
-            integrity.CommandText = "PRAGMA integrity_check;";
-            var result = integrity.ExecuteScalar() as string;
-            if (!string.Equals(result, "ok", StringComparison.OrdinalIgnoreCase))
-            {
-                return $"integrity_check returned '{result}'";
-            }
-
-            using var table = connection.CreateCommand();
-            table.CommandText = "SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name = 'Sessions';";
-            return Convert.ToInt64(table.ExecuteScalar()) == 1 ? null : "no Sessions table";
-        }
-        catch (SqliteException ex)
-        {
-            return ex.Message;
-        }
+        var hasContent = _file.HasContent();
+        _file.Release();
+        return (ComputeMd5(LocalPath), hasContent);
     }
 
     private void SaveState(string fileId, string md5) => _stateStore.Save(new SyncState(fileId, md5, _now()));
 
-    private string TempPath(string purpose) => Path.Combine(AppDirectory, $"{Path.GetFileName(_databasePath)}.{purpose}-tmp");
+    private string TempPath(string purpose) => Path.Combine(AppDirectory, $"{Path.GetFileName(LocalPath)}.{purpose}-tmp");
 
     private static void TryDelete(string path)
     {

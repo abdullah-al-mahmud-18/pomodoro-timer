@@ -114,9 +114,14 @@
                 <!-- Name -->
                 <StackPanel Spacing="4">
                     <TextBlock Text="Name" FontSize="12" Foreground="Gray" />
-                    <TextBox Text="{Binding SessionName}"
-                             Watermark="e.g. Deep work"
-                             IsEnabled="{Binding IsConfiguring}" />
+                    <!-- Suggestions from names.txt; typing filters them (case-insensitive, anywhere in the name). -->
+                    <AutoCompleteBox Text="{Binding SessionName}"
+                                     ItemsSource="{Binding Names}"
+                                     FilterMode="Contains"
+                                     MinimumPrefixLength="1"
+                                     MaxDropDownHeight="240"
+                                     Watermark="Type to search your names"
+                                     IsEnabled="{Binding IsConfiguring}" />
                 </StackPanel>
 
                 <!-- Custom duration (timer mode only) -->

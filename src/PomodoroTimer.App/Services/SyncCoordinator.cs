@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Net;
 using System.Net.Http;
@@ -35,10 +36,13 @@ public sealed class SyncCoordinator
     private readonly ILocalFileGate _gate;
     private readonly Func<Window?> _owner;
 
-    private GoogleDriveFileStore? _store;
-    private SyncService? _service;
+    // Synced one after the other, each against its own Drive file and state file. The db goes first: it matters most.
+    private readonly SyncTarget _database = new(
+        "pomodoro.db", "data", DriveFileSpec.Database, () => new DatabaseSyncFile(AppPaths.DatabasePath), AppPaths.SyncStatePath);
+    private readonly SyncTarget _names = new(
+        "names.txt", "names list", DriveFileSpec.Names, () => new NamesSyncFile(AppPaths.NamesPath), AppPaths.NamesSyncStatePath);
+
     private bool _needsSignIn;
-    private bool _uploadOnShutdownAllowed;
     private Task _current = Task.CompletedTask;
 
     public SyncCoordinator(GoogleAuthService auth, ILocalFileGate gate, Func<Window?> owner)
@@ -54,6 +58,11 @@ public sealed class SyncCoordinator
     /// <summary>Raised on the UI thread after a download replaced the local db, so pages can migrate and reload it.</summary>
     public event Action? LocalDatabaseReplaced;
 
+    /// <summary>Raised on the UI thread after a download replaced names.txt, so the Name list can be reloaded.</summary>
+    public event Action? NamesReplaced;
+
+    private SyncTarget[] Targets => new[] { _database, _names };
+
     /// <summary>Startup sync. Runs before the database is opened; never signs in interactively.</summary>
     public Task StartupAsync() => RunExclusive(() => SyncAsync(interactiveSignIn: false));
 
@@ -61,8 +70,8 @@ public sealed class SyncCoordinator
     public Task RetryAsync() => RunExclusive(() => SyncAsync(interactiveSignIn: _needsSignIn));
 
     /// <summary>
-    /// Shutdown sync: upload local changes if the cloud copy hasn't changed since the last sync. Bounded by a
-    /// ~30 s timeout; on any failure the app closes anyway and the next start uploads the pending changes.
+    /// Shutdown sync: upload local changes to each file if its cloud copy hasn't changed since the last sync.
+    /// Bounded by a ~30 s timeout; on any failure the app closes anyway and the next start uploads the pending changes.
     /// </summary>
     public async Task ShutdownAsync()
     {
@@ -79,20 +88,31 @@ public sealed class SyncCoordinator
                 }
             }
 
-            if (_service is null || !_uploadOnShutdownAllowed)
+            foreach (var target in Targets)
             {
-                Log.Information("Shutdown sync skipped (configured: {Configured}, signed in: {SignedIn}, allowed this session: {Allowed})",
-                    _auth.IsConfigured, _service is not null, _uploadOnShutdownAllowed);
-                return;
-            }
+                if (target.Service is null || !target.UploadOnShutdownAllowed)
+                {
+                    Log.Information("Shutdown sync of {File} skipped (configured: {Configured}, signed in: {SignedIn}, allowed this session: {Allowed})",
+                        target.FileName, _auth.IsConfigured, target.Service is not null, target.UploadOnShutdownAllowed);
+                    continue;
+                }
 
-            var result = await _service.UploadOnShutdownAsync(cts.Token);
-            Log.Information("Shutdown sync finished: {Result}", result.Kind);
-        }
-        catch (Exception ex) when (IsAuthorizationFailure(ex))
-        {
-            Log.Warning(ex, "Shutdown sync: Google authorization failed; changes stay on this device and upload after the next sign-in");
-            await TryClearTokenAsync();
+                try
+                {
+                    var result = await target.Service.UploadOnShutdownAsync(cts.Token);
+                    Log.Information("Shutdown sync of {File} finished: {Result}", target.FileName, result.Kind);
+                }
+                catch (Exception ex) when (IsAuthorizationFailure(ex))
+                {
+                    Log.Warning(ex, "Shutdown sync: Google authorization failed; changes stay on this device and upload after the next sign-in");
+                    await TryClearTokenAsync();
+                    return;
+                }
+                catch (Exception ex)
+                {
+                    Log.Warning(ex, "Shutdown sync of {File} failed or timed out; changes stay on this device and upload at the next start", target.FileName);
+                }
+            }
         }
         catch (Exception ex)
         {
@@ -117,7 +137,10 @@ public sealed class SyncCoordinator
 
     private async Task SyncAsync(bool interactiveSignIn)
     {
-        _uploadOnShutdownAllowed = false;
+        foreach (var target in Targets)
+        {
+            target.UploadOnShutdownAllowed = false;
+        }
 
         if (!_auth.IsConfigured)
         {
@@ -130,7 +153,7 @@ public sealed class SyncCoordinator
         Status.SetBusy(interactiveSignIn ? "Waiting for Google sign-in…" : "Syncing…");
         try
         {
-            if (_service is null)
+            if (_database.Service is null)
             {
                 var credential = interactiveSignIn
                     ? await SignInAsync()
@@ -141,33 +164,21 @@ public sealed class SyncCoordinator
                     return;
                 }
 
-                _store = new GoogleDriveFileStore(credential);
-                _service = new SyncService(_store, AppPaths.DatabasePath, AppPaths.SyncStatePath, _gate);
+                foreach (var target in Targets)
+                {
+                    target.Connect(credential, _gate);
+                }
                 _needsSignIn = false;
                 Status.SetBusy("Syncing…");
             }
 
-            // From here the hash rules keep the shutdown upload safe even if this sync fails part-way.
-            _uploadOnShutdownAllowed = true;
-
-            SyncPlan plan;
-            using (var cts = new CancellationTokenSource(PlanTimeout))
+            var report = new SyncReport();
+            foreach (var target in Targets)
             {
-                plan = await _service.PlanAsync(cts.Token);
+                await SyncTargetAsync(target, report);
             }
 
-            if (await ResolveAsync(plan) is not { } action)
-            {
-                return;
-            }
-
-            SyncResult result;
-            using (var cts = new CancellationTokenSource(TransferTimeout))
-            {
-                result = await _service.ExecuteAsync(plan, action, cts.Token);
-            }
-
-            await ReportAsync(plan, result);
+            report.Apply(Status);
         }
         catch (Exception ex)
         {
@@ -175,103 +186,142 @@ public sealed class SyncCoordinator
         }
     }
 
-    /// <summary>Turns plan actions that need the user into Upload/Download, or null to sync nothing this session.</summary>
-    private async Task<SyncAction?> ResolveAsync(SyncPlan plan)
+    private async Task SyncTargetAsync(SyncTarget target, SyncReport report)
     {
+        var service = target.Service!;
+
+        // From here the hash rules keep the shutdown upload safe even if this sync fails part-way.
+        target.UploadOnShutdownAllowed = true;
+
+        SyncPlan plan;
+        using (var cts = new CancellationTokenSource(PlanTimeout))
+        {
+            plan = await service.PlanAsync(cts.Token);
+        }
+
+        if (await ResolveAsync(target, plan, report) is not { } action)
+        {
+            return;
+        }
+
+        SyncResult result;
+        using (var cts = new CancellationTokenSource(TransferTimeout))
+        {
+            result = await service.ExecuteAsync(plan, action, cts.Token);
+        }
+
+        await ReportAsync(target, plan, result, report);
+    }
+
+    /// <summary>Turns plan actions that need the user into Upload/Download, or null to sync nothing this session.</summary>
+    private async Task<SyncAction?> ResolveAsync(SyncTarget target, SyncPlan plan, SyncReport report)
+    {
+        var isDatabase = target == _database;
         switch (plan.Action)
         {
             case SyncAction.Conflict:
             {
-                Log.Information("Sync conflict: asking the user which copy to keep");
+                Log.Information("Sync conflict on {File}: asking the user which copy to keep", target.FileName);
                 var choice = await AskAsync(
-                    "Choose which data to keep",
-                    "This device and Google Drive both have changes the other doesn't have. They can't be merged, so choose one copy to keep.\n\n" +
-                    "• Keep this device's data: upload it. The Google Drive copy stays in Drive's version history.\n" +
-                    "• Keep cloud data: download it. This device's data is backed up first.\n" +
-                    "• Work offline for now: change nothing and ask again next time the app starts.",
-                    "Keep this device's data", "Keep cloud data", "Work offline for now");
-                Log.Information("Sync conflict resolved by user: {Choice}", choice switch { 0 => "keep this device", 1 => "keep cloud", _ => "work offline" });
+                    isDatabase ? "Choose which data to keep" : "Choose which names list to keep",
+                    (isDatabase
+                        ? "This device and Google Drive both have changes the other doesn't have. They can't be merged, so choose one copy to keep.\n\n"
+                        : "Your names list (names.txt) was changed both on this device and in Google Drive. They can't be merged, so choose one copy to keep.\n\n") +
+                    $"• Keep this device's {target.Noun}: upload it. The Google Drive copy stays in Drive's version history.\n" +
+                    $"• Keep cloud {target.Noun}: download it. This device's {target.Noun} is backed up first.\n" +
+                    $"• Work offline for now: change nothing and ask again next time the app starts.",
+                    $"Keep this device's {target.Noun}", $"Keep cloud {target.Noun}", "Work offline for now");
+                Log.Information("Sync conflict on {File} resolved by user: {Choice}", target.FileName,
+                    choice switch { 0 => "keep this device", 1 => "keep cloud", _ => "work offline" });
                 return choice switch
                 {
                     0 => SyncAction.Upload,
                     1 => SyncAction.Download,
-                    _ => PauseSync()
+                    _ => Pause(target, report)
                 };
             }
 
             case SyncAction.CloudFileDeleted:
             {
-                Log.Information("Cloud file was deleted: asking the user before re-uploading");
+                Log.Information("Cloud copy of {File} was deleted: asking the user before re-uploading", target.FileName);
                 var choice = await AskAsync(
                     "Google Drive copy is missing",
-                    "The pomodoro.db file this device syncs with is no longer in your Google Drive (it was deleted or moved to the bin). " +
-                    "Upload this device's data as a new copy?",
-                    "Upload this device's data", "Work offline for now");
-                Log.Information("Deleted cloud file: user chose {Choice}", choice == 0 ? "re-upload" : "work offline");
-                return choice == 0 ? SyncAction.Upload : PauseSync();
+                    $"The {target.FileName} file this device syncs with is no longer in your Google Drive (it was deleted or moved to the bin). " +
+                    $"Upload this device's {target.Noun} as a new copy?",
+                    $"Upload this device's {target.Noun}", "Work offline for now");
+                Log.Information("Deleted cloud {File}: user chose {Choice}", target.FileName, choice == 0 ? "re-upload" : "work offline");
+                return choice == 0 ? SyncAction.Upload : Pause(target, report);
             }
 
             case SyncAction.AmbiguousCloudFiles:
                 await AskAsync(
                     "Several Google Drive copies found",
-                    $"Found {plan.CloudMatchCount} pomodoro.db files from this app in your Google Drive, so sync can't tell which one is right. " +
+                    $"Found {plan.CloudMatchCount} {target.FileName} files from this app in your Google Drive, so sync can't tell which one is right. " +
                     "Nothing was changed. Delete the copies you don't want in Google Drive, then press Retry.",
                     "OK");
-                return PauseSync("Sync paused — several copies in Google Drive");
+                return Pause(target, report, "Sync paused — several copies in Google Drive");
 
             default:
                 return plan.Action;
         }
     }
 
-    private SyncAction? PauseSync(string statusText = "Sync paused — working offline")
+    private static SyncAction? Pause(SyncTarget target, SyncReport report, string statusText = "Sync paused — working offline")
     {
-        _uploadOnShutdownAllowed = false;
-        Status.Set(statusText, "Nothing is uploaded or downloaded this session. You'll be asked again next time the app starts.", "Retry");
+        target.UploadOnShutdownAllowed = false;
+        report.PausedStatus ??= statusText;
+        report.Details.Add($"{target.FileName}: nothing is uploaded or downloaded this session. You'll be asked again next time the app starts.");
         return null;
     }
 
-    private async Task ReportAsync(SyncPlan plan, SyncResult result)
+    private async Task ReportAsync(SyncTarget target, SyncPlan plan, SyncResult result, SyncReport report)
     {
-        var time = DateTime.Now.ToString("HH:mm");
+        var isDatabase = target == _database;
+        var backupNote = result.BackupPath is null ? "" : $" The previous copy on this device was backed up to {result.BackupPath}.";
         switch (result.Kind)
         {
-            case SyncResultKind.Downloaded:
-                RaiseLocalDatabaseReplaced();
-                Status.Set($"Synced {time}",
-                    result.BackupPath is null
-                        ? "Downloaded your data from Google Drive."
-                        : $"Downloaded your data from Google Drive. The previous data on this device was backed up to {result.BackupPath}.");
+            case SyncResultKind.Downloaded when isDatabase:
+                RaiseReplaced(LocalDatabaseReplaced, "Reloading data after sync");
+                report.Details.Add("Downloaded your data from Google Drive." + backupNote);
                 break;
 
-            case SyncResultKind.Uploaded when plan.Action == SyncAction.Upload:
+            case SyncResultKind.Downloaded:
+                RaiseReplaced(NamesReplaced, "Reloading names after sync");
+                report.Details.Add("Downloaded your names list from Google Drive." + backupNote);
+                break;
+
+            case SyncResultKind.Uploaded when isDatabase && plan.Action == SyncAction.Upload:
                 // L != S, C == S: the last session's changes never reached the cloud (crash or offline close).
-                Status.Set($"Synced {time} · uploaded changes from last time",
-                    "Changes from your last session hadn't reached Google Drive yet; they've been uploaded now.");
+                report.UploadedPendingData = true;
+                report.Details.Add("Changes from your last session hadn't reached Google Drive yet; they've been uploaded now.");
+                break;
+
+            case SyncResultKind.Uploaded when !isDatabase && plan.Action == SyncAction.Upload:
+                // Usually the user edited names.txt while the app was closed — expected, so no notice in the status text.
+                report.Details.Add("Uploaded your updated names list.");
                 break;
 
             case SyncResultKind.DownloadVerificationFailed:
-                Status.Set("Sync problem", "The Google Drive copy couldn't be verified, so it wasn't used. Your data on this device is unchanged.", "Retry");
-                await AskAsync("Couldn't use the Google Drive copy",
-                    "The copy in Google Drive couldn't be verified as a valid database, so it wasn't used. Your data on this device is unchanged.",
+                report.Problem = true;
+                report.Details.Add($"The Google Drive copy of {target.FileName} couldn't be verified, so it wasn't used. The copy on this device is unchanged.");
+                await AskAsync($"Couldn't use the Google Drive copy of {target.FileName}",
+                    isDatabase
+                        ? "The copy in Google Drive couldn't be verified as a valid database, so it wasn't used. Your data on this device is unchanged."
+                        : "The names list in Google Drive couldn't be verified as a text file, so it wasn't used. The names list on this device is unchanged.",
                     "OK");
-                break;
-
-            default:
-                Status.Set($"Synced {time}");
                 break;
         }
     }
 
-    private void RaiseLocalDatabaseReplaced()
+    private static void RaiseReplaced(Action? handler, string context)
     {
         try
         {
-            LocalDatabaseReplaced?.Invoke();
+            handler?.Invoke();
         }
         catch (Exception ex)
         {
-            ErrorReporter.Report(ex, "Reloading data after sync");
+            ErrorReporter.Report(ex, context);
         }
     }
 
@@ -281,7 +331,10 @@ public sealed class SyncCoordinator
         {
             case var _ when IsAuthorizationFailure(ex):
                 Log.Warning(ex, "Google authorization failed; the user needs to sign in again");
-                _uploadOnShutdownAllowed = false;
+                foreach (var target in Targets)
+                {
+                    target.UploadOnShutdownAllowed = false;
+                }
                 await TryClearTokenAsync();
                 DropService();
                 ShowNeedsSignIn();
@@ -398,8 +451,77 @@ public sealed class SyncCoordinator
 
     private void DropService()
     {
-        _store?.Dispose();
-        _store = null;
-        _service = null;
+        foreach (var target in Targets)
+        {
+            target.Disconnect();
+        }
+    }
+
+    /// <summary>One synced file: its Drive file, local file, and per-session sync state.</summary>
+    private sealed class SyncTarget
+    {
+        private readonly DriveFileSpec _spec;
+        private readonly Func<SyncedFile> _createFile;
+        private readonly string _statePath;
+        private GoogleDriveFileStore? _store;
+
+        public SyncTarget(string fileName, string noun, DriveFileSpec spec, Func<SyncedFile> createFile, string statePath)
+        {
+            FileName = fileName;
+            Noun = noun;
+            _spec = spec;
+            _createFile = createFile;
+            _statePath = statePath;
+        }
+
+        /// <summary>The local file name shown to the user, e.g. "names.txt".</summary>
+        public string FileName { get; }
+
+        /// <summary>What the dialogs call its content, e.g. "Keep this device's data".</summary>
+        public string Noun { get; }
+
+        public SyncService? Service { get; private set; }
+
+        public bool UploadOnShutdownAllowed { get; set; }
+
+        public void Connect(UserCredential credential, ILocalFileGate gate)
+        {
+            _store = new GoogleDriveFileStore(credential, _spec);
+            Service = new SyncService(_store, _createFile(), _statePath, gate);
+        }
+
+        public void Disconnect()
+        {
+            _store?.Dispose();
+            _store = null;
+            Service = null;
+        }
+    }
+
+    /// <summary>What one startup/retry sync did across all files, turned into the status bar text at the end.</summary>
+    private sealed class SyncReport
+    {
+        public List<string> Details { get; } = new();
+        public string? PausedStatus { get; set; }
+        public bool Problem { get; set; }
+        public bool UploadedPendingData { get; set; }
+
+        public void Apply(SyncStatusViewModel status)
+        {
+            var detail = Details.Count > 0 ? string.Join("\n", Details) : null;
+            if (Problem)
+            {
+                status.Set("Sync problem", detail, "Retry");
+            }
+            else if (PausedStatus is not null)
+            {
+                status.Set(PausedStatus, detail, "Retry");
+            }
+            else
+            {
+                var time = DateTime.Now.ToString("HH:mm");
+                status.Set(UploadedPendingData ? $"Synced {time} · uploaded changes from last time" : $"Synced {time}", detail);
+            }
+        }
     }
 }

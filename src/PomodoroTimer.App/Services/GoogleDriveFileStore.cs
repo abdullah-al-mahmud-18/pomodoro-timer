@@ -19,29 +19,42 @@ using DriveFile = Google.Apis.Drive.v3.Data.File;
 
 namespace PomodoroTimer.App.Services;
 
+/// <summary>Which file in Drive a <see cref="GoogleDriveFileStore"/> syncs: its name, type, and appProperties tag.</summary>
+public sealed record DriveFileSpec(string FileName, string MimeType, string TagValue)
+{
+    /// <summary>pomodoro.db, tagged { pomodoroSync: primary }. Debug builds use pomodoro-dev.db tagged { pomodoroSync: dev }.</summary>
+    public static DriveFileSpec Database { get; } = AppPaths.IsDevelopment
+        ? new("pomodoro-dev.db", "application/x-sqlite3", "dev")
+        : new("pomodoro.db", "application/x-sqlite3", "primary");
+
+    /// <summary>names.txt, tagged { pomodoroSync: names }. Debug builds use names-dev.txt tagged { pomodoroSync: names-dev }.</summary>
+    public static DriveFileSpec Names { get; } = AppPaths.IsDevelopment
+        ? new("names-dev.txt", "text/plain", "names-dev")
+        : new("names.txt", "text/plain", "names");
+}
+
 /// <summary>
-/// The single pomodoro.db file in the user's Google Drive, tagged with appProperties { pomodoroSync: primary }
-/// and kept in a PomodoroTimer folder (tagged { pomodoroSync: folder }) that the app creates.
+/// One app file in the user's Google Drive (pomodoro.db or names.txt), found by its appProperties tag and kept in
+/// a PomodoroTimer folder (tagged { pomodoroSync: folder }) that the app creates.
 /// Only whole-file upload/download — the database is never accessed over the network.
-/// Debug builds use pomodoro-dev.db tagged { pomodoroSync: dev } in the same folder, so development syncs never
-/// find, update, or download the real file.
+/// Debug builds use differently named and tagged files in the same folder (see <see cref="DriveFileSpec"/>), so
+/// development syncs never find, update, or download the real files.
 /// </summary>
 public sealed class GoogleDriveFileStore : ICloudFileStore, IDisposable
 {
-    private const string FileName = AppPaths.IsDevelopment ? "pomodoro-dev.db" : "pomodoro.db";
-    private const string MimeType = "application/x-sqlite3";
     private const string FolderName = "PomodoroTimer";
     private const string FolderMimeType = "application/vnd.google-apps.folder";
     private const string AppPropertyKey = "pomodoroSync";
-    private const string AppPropertyValue = AppPaths.IsDevelopment ? "dev" : "primary";
     private const string FolderPropertyValue = "folder";
     private const string FileFields = "id, md5Checksum, trashed, parents";
 
     private readonly DriveService _service;
+    private readonly DriveFileSpec _spec;
     private string? _folderId;
 
-    public GoogleDriveFileStore(IConfigurableHttpClientInitializer credential)
+    public GoogleDriveFileStore(IConfigurableHttpClientInitializer credential, DriveFileSpec spec)
     {
+        _spec = spec;
         _service = new DriveService(new BaseClientService.Initializer
         {
             HttpClientInitializer = credential,
@@ -62,7 +75,7 @@ public sealed class GoogleDriveFileStore : ICloudFileStore, IDisposable
     public async Task<IReadOnlyList<CloudFileInfo>> FindAsync(CancellationToken cancellationToken)
     {
         var request = _service.Files.List();
-        request.Q = $"appProperties has {{ key='{AppPropertyKey}' and value='{AppPropertyValue}' }} and trashed = false";
+        request.Q = $"appProperties has {{ key='{AppPropertyKey}' and value='{_spec.TagValue}' }} and trashed = false";
         request.Spaces = "drive";
         request.Fields = "files(id, md5Checksum)";
         request.PageSize = 10;
@@ -90,14 +103,14 @@ public sealed class GoogleDriveFileStore : ICloudFileStore, IDisposable
     {
         var metadata = new DriveFile
         {
-            Name = FileName,
-            MimeType = MimeType,
+            Name = _spec.FileName,
+            MimeType = _spec.MimeType,
             Parents = new List<string> { await GetOrCreateFolderAsync(cancellationToken) },
-            AppProperties = new Dictionary<string, string> { [AppPropertyKey] = AppPropertyValue }
+            AppProperties = new Dictionary<string, string> { [AppPropertyKey] = _spec.TagValue }
         };
 
         await using var stream = File.OpenRead(localPath);
-        var request = _service.Files.Create(metadata, stream, MimeType);
+        var request = _service.Files.Create(metadata, stream, _spec.MimeType);
         request.Fields = FileFields;
         ThrowIfFailed(await request.UploadAsync(cancellationToken));
         return ToInfo(request.ResponseBody);
@@ -106,7 +119,7 @@ public sealed class GoogleDriveFileStore : ICloudFileStore, IDisposable
     public async Task<CloudFileInfo> UpdateAsync(string fileId, string localPath, CancellationToken cancellationToken)
     {
         await using var stream = File.OpenRead(localPath);
-        var request = _service.Files.Update(new DriveFile(), fileId, stream, MimeType);
+        var request = _service.Files.Update(new DriveFile(), fileId, stream, _spec.MimeType);
         request.Fields = FileFields;
         ThrowIfFailed(await request.UploadAsync(cancellationToken));
 
@@ -168,7 +181,7 @@ public sealed class GoogleDriveFileStore : ICloudFileStore, IDisposable
     }
 
     /// <summary>
-    /// Moves the database file into the app folder if it's elsewhere (e.g. uploaded to the top of My Drive by an
+    /// Moves the file into the app folder if it's elsewhere (e.g. uploaded to the top of My Drive by an
     /// earlier version). The file ID and revision history are kept. Best effort: the content upload has already
     /// succeeded, so a failed move is only logged and tried again on the next upload.
     /// </summary>

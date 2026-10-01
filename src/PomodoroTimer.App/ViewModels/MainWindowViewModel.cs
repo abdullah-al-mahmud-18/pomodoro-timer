@@ -1,10 +1,12 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using Avalonia.Threading;
 using Microsoft.Data.Sqlite;
 using PomodoroTimer.App.Services;
 using PomodoroTimer.Core.Data;
 using PomodoroTimer.Core.Models;
+using PomodoroTimer.Core.Names;
 using PomodoroTimer.Core.Services;
 using Serilog;
 
@@ -20,6 +22,7 @@ public class MainWindowViewModel : ViewModelBase
     private TimerEngine? _engine;
 
     private string _sessionName = string.Empty;
+    private IReadOnlyList<string> _names = Array.Empty<string>();
     private bool _isTimerMode = true;
     private int _hours;
     private int _minutes = 25;
@@ -106,10 +109,35 @@ public class MainWindowViewModel : ViewModelBase
     public bool IsHistoryViewActive => _currentPage == AppPage.History;
     public bool IsDashboardViewActive => _currentPage == AppPage.Dashboard;
 
-    public string SessionName
+    /// <summary>
+    /// What's typed in the Name box. AutoCompleteBox sets null when cleared, so null is stored as empty.
+    /// </summary>
+    public string? SessionName
     {
         get => _sessionName;
-        set => SetField(ref _sessionName, value);
+        set => SetField(ref _sessionName, value ?? string.Empty);
+    }
+
+    /// <summary>The names from names.txt — the only names a session can be started with.</summary>
+    public IReadOnlyList<string> Names
+    {
+        get => _names;
+        private set => SetField(ref _names, value);
+    }
+
+    /// <summary>Reads names.txt (creating it empty if missing). On failure keeps the current list and shows why.</summary>
+    public void ReloadNames()
+    {
+        try
+        {
+            Names = NameList.LoadOrCreate(AppPaths.NamesPath);
+            Log.Information("Loaded {Count} names from {Path}", Names.Count, AppPaths.NamesPath);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            Log.Error(ex, "Couldn't read the names list at {Path}", AppPaths.NamesPath);
+            ErrorMessage = $"Couldn't read the names list ({AppPaths.NamesPath}). {ErrorReporter.UserMessageFor(ex)}";
+        }
     }
 
     public bool IsTimerMode
@@ -267,13 +295,23 @@ public class MainWindowViewModel : ViewModelBase
             return;
         }
 
-        if (string.IsNullOrWhiteSpace(SessionName))
+        if (Names.Count == 0)
         {
-            ErrorMessage = "Enter a name before starting.";
+            ErrorMessage = $"No names yet. Add names to {AppPaths.NamesPath}, one per line, then restart the app.";
             return;
         }
 
-        var name = SessionName.Trim();
+        if (string.IsNullOrWhiteSpace(SessionName))
+        {
+            ErrorMessage = "Choose a name before starting.";
+            return;
+        }
+
+        if (NameList.Find(Names, SessionName) is not { } name)
+        {
+            ErrorMessage = $"\"{SessionName.Trim()}\" isn't in your names list. Add it to {AppPaths.NamesPath} and restart the app, or choose a name from the list.";
+            return;
+        }
         var mode = IsTimerMode ? TimerMode.Timer : TimerMode.Stopwatch;
 
         if (mode == TimerMode.Timer && CustomDuration <= TimeSpan.Zero)

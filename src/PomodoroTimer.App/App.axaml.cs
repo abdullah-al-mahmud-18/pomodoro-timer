@@ -105,6 +105,10 @@ public class App : Application
             mainViewModel.ReloadData();
         };
 
+        // names.txt is read once here, after startup sync; a Retry/Sign in can download a newer one mid-session.
+        mainViewModel.ReloadNames();
+        _sync.NamesReplaced += mainViewModel.ReloadNames;
+
         _window!.DataContext = mainViewModel;
         _window.HideBusyOverlay();
     }
