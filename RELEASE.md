@@ -1,5 +1,67 @@
 # Release notes
 
+## 2.2.1 — 2026-10-01
+
+Pomodoro Timer 2.2.1 lets you pick session names from a list you keep yourself, and syncs that list between your computers along with your history. It also adds a **Sync** button and saves a running session if you close the app. Your history carries over unchanged.
+
+This release is for **Windows 11** and **Ubuntu 24.04**. Both have the same features and share one history format.
+
+> **Before your first session:** every session now needs a name from your names list, and the list starts out empty. After you start 2.2.1 once, add your names to `names.txt` and restart the app. See [Your names list](#your-names-list) below.
+
+### What's new since 2.1.2
+
+**Your names list**
+
+- Session names now come from `names.txt`, a plain text file in the same folder as your history, with one name per line. Edit it in any text editor, such as Notepad on Windows or Text Editor on Ubuntu.
+- The app creates the file, empty, the first time 2.2.1 starts. Changes to it show up the next time you start the app.
+- The **Name** box is now a search box. Type a letter or two and it lists the names that contain them, whether you type upper or lower case.
+- A name is required, and it must be one from your list. If it isn't, the app tells you so and shows where `names.txt` is.
+- Removing a name from the list doesn't change your history. Past sessions keep their names.
+
+**Your names list syncs too**
+
+- If you use Google Drive sync, `names.txt` is kept in your Drive next to your history, as `PomodoroTimer/names.txt`. Every computer gets the same list.
+- It follows the same safety rules as your history. A backup is made before the list is replaced by a download, and a downloaded list is checked before it's used. If the list was changed on two computers without syncing in between, the app asks which one to keep: **Keep this device's names list**, **Keep cloud names list**, or **Work offline for now**.
+
+**Sync button**
+
+- A new **Sync** button after **History** syncs your history and names list with Google Drive whenever you like. You don't have to wait for the app to start or close.
+- It does the same checks as at startup, and asks you to sign in if needed. It's greyed out while a sync is already running.
+- The app still syncs on its own when it starts and when you close it.
+
+**Closing the app during a session**
+
+- Before, closing the app while a timer or stopwatch was running lost that session.
+- Now the app asks first, for example **A timer is running — stop and close?**
+  - **Stop and close** saves the session exactly as if you had pressed **Stop**, uploads it, and then closes. A timer is saved as stopped early.
+  - **Keep running** cancels the close, and your session carries on.
+- If the computer is shutting down or logging off, the app saves the session and syncs without asking.
+
+**For developers**
+
+A development build (`dotnet run` or `scripts/run.*`) has its own names list in the `PomodoroTimer-Dev` folder. In Google Drive it syncs `names-dev.txt` and never touches your real `names.txt`. Add a few names to the dev `names.txt` before starting a session. See [HOWTO.md](HOWTO.md#running-locally).
+
+### Your names list
+
+The file is in the same folder as your history:
+
+| System | Location |
+|---|---|
+| Windows | `%LOCALAPPDATA%\PomodoroTimer\names.txt` |
+| Ubuntu | `~/.local/share/PomodoroTimer/names.txt` |
+
+Put one name on each line:
+
+```
+Deep work
+Reading
+Email
+```
+
+Blank lines and spaces around a name are ignored. A name listed twice appears once.
+
+**If you use more than one computer,** fill in the list on one computer, then close the app there so the list is uploaded. The other computers download it the next time they start. If two computers each get their own list before either has synced, the app asks which list to keep.
+
 ## 2.1.2 — 2026-10-01
 
 Pomodoro Timer 2.1.2 adds a **Ratio** table to the Dashboard. The table shows how your time splits between work, study, and breaks. This release also adds a 6-month period and renames the periods on the Dashboard and History pages to read more naturally. Everything else works as in 2.0.1, including Google Drive sync, and your history carries over unchanged.
@@ -93,6 +155,7 @@ For sync to work, the app folder needs a `client_secret.json` file, which links 
 
 ### Upgrading
 
+- **From 2.1.x:** replace the old app folder with the new one, and copy your `client_secret.json` into it if you use sync. Your history, sync settings, and Google sign-in carry over. Start the app once, add your names to `names.txt`, and restart it (see [Your names list](#your-names-list)).
 - **From 2.0.0 or 2.0.1:** replace the old app folder with the new one. Keep your `client_secret.json` and copy it into the new folder if you use sync. Your history, sync settings, and Google sign-in carry over.
 - **From 1.0:** your history carries over. Replace the old app folder with the new one and leave your data file where it is.
 - **If you use more than one computer:** sign in on the computer whose history you want to keep first. Its history is uploaded to Google Drive. When you then sign in on a second computer that already has sessions of its own, the app asks which history to keep. Sessions from 1.0 on different computers can't be combined.
@@ -135,15 +198,16 @@ Your history is stored in one file on your computer:
 | Windows | `%LOCALAPPDATA%\PomodoroTimer\pomodoro.db` |
 | Ubuntu | `~/.local/share/PomodoroTimer/pomodoro.db` |
 
-If you turn on sync, a copy of this file is also kept in your Google Drive. Nothing else is uploaded. The same folder on your computer also holds:
+If you turn on sync, a copy of this file is also kept in your Google Drive, along with your names list. Nothing else is uploaded. The same folder on your computer also holds:
 
 | File | What it is |
 |---|---|
-| `sync-state.json` | Notes on when this computer last synced |
+| `names.txt` | Your names list, one name per line. Edit it yourself. |
+| `sync-state.json`, `sync-state-names.json` | Notes on when this computer last synced your history and your names list |
 | `google-token` | Your Google sign-in for this computer. Delete this folder to sign out. |
 | `pomodoro-<date>.log` | Daily log files. The last 14 are kept. |
-| `pomodoro.db.bak-<date-time>` | Backups made before your data is replaced by a download. The last five are kept. |
+| `pomodoro.db.bak-<date-time>`, `names.txt.bak-<date-time>` | Backups made before your history or names list is replaced by a download. The last five of each are kept. |
 
 On Ubuntu, `~/.local/share` is a hidden folder. In the Files app, press **Ctrl+H** to show hidden folders.
 
-Each user account on a computer has its own history. To start fresh, close the app and delete `pomodoro.db`. If you use sync, also delete `sync-state.json` here and the `PomodoroTimer` folder in your Google Drive. Otherwise the app downloads your history again.
+Each user account on a computer has its own history. To start fresh, close the app and delete `pomodoro.db`. If you use sync, also delete `sync-state.json` here and the `PomodoroTimer` folder in your Google Drive. Otherwise the app downloads your history again. Deleting that folder also removes the names list from Drive. Keep your local `names.txt`, and choose **Upload this device's names list** when the app says the Google Drive copy is missing.

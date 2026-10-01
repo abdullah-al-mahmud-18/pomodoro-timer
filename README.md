@@ -4,11 +4,15 @@
 
 A cross-platform Pomodoro / timer & stopwatch desktop app built with Avalonia UI. Runs on **Windows 11** and **Ubuntu 24.04** from a single codebase.
 
+**Current version: 2.2.1.** See [RELEASE.md](RELEASE.md) for what changed in each release.
+
+> **Upgrading from 2.1.x?** Session names now come from a list you keep in `names.txt`. After the first start of 2.2.1, add your names to that file (one per line) and restart the app. Until then you can't start a session. See [Session names](#session-names). Your history carries over unchanged.
+
 ## Features
 
 - **Timer** — counts down from a duration you set, with a live progress bar. Can be paused, resumed, and stopped.
 - **Stopwatch** — counts up with no fixed duration. Can be paused, resumed, and stopped.
-- **Custom durations** — set any hours/minutes/seconds combination, with a name, for either mode. The duration boxes accept digits only; letters and symbols are ignored as you type or paste.
+- **Custom durations** — set any hours/minutes/seconds combination for either mode. The duration boxes accept digits only; letters and symbols are ignored as you type or paste.
 - **Name** — every session needs a name picked from your own list in `names.txt` (see [Session names](#session-names)). Type a letter or two and the Name box suggests matching names.
 - **Mode** — every session is tagged Work, Study, or Break; a mode must be selected and a name chosen before starting. Mode and Name are cleared when a session ends, ready for the next one.
 - **Time display** — always `HH:MM:SS` (e.g. `00:25:00`), whether idle, running, or paused.
@@ -17,18 +21,23 @@ A cross-platform Pomodoro / timer & stopwatch desktop app built with Avalonia UI
   - Delete a single entry with its bin icon, or delete everything the current filters show with **Delete Filtered Data** (asks "Are you sure?" first).
   - Stopwatch sessions always count as Completed, since a stopwatch has no target to stop short of.
 - **Dashboard** — totals for today and for the last 7 days, 14 days, 1 month, 3 months, 6 months, and 1 year (rolling 7/14/30/90/180/365-day windows), plus daily averages and a **Ratio** table (each category's share of the recorded time, as percentages that add up to 100) for the same periods, broken down by Work/Study/Break. Reloaded from the database every time the page is opened, and after deletes in History. It always counts all sessions and ignores History's filters.
-- **Navigation** — Timer, Dashboard, and History buttons on every page; the current page is highlighted. A running timer or stopwatch keeps going while you view other pages.
+- **Navigation** — Timer, Dashboard, and History buttons on every page; the current page is highlighted. A **Sync** button after History syncs with Google Drive on demand (see [Google Drive sync](#google-drive-sync)). A running timer or stopwatch keeps going while you view other pages.
 - **Dark theme** — the app always uses a dark theme, regardless of the OS setting.
+- **Closing mid-session** — if you close the app while a timer or stopwatch is running or paused, it asks first, for example "A timer is running — stop and close?". **Keep running** cancels the close. **Stop and close** saves the session exactly as if you had pressed **Stop** (a timer counts as stopped early), uploads it with the shutdown sync, and closes. When the computer is shutting down or logging off, the app saves and syncs without asking.
 - **Completion notification** — when a timer reaches zero, you get a native OS toast notification and a completion sound. (Stopwatch sessions end via Stop, since counting up has no natural completion point.)
-
-- **Google Drive sync** (optional) — keeps the same history on several computers, such as a laptop and a PC. See [Google Drive sync](#google-drive-sync) below.
+- **Google Drive sync** (optional) — keeps the same history and names list on several computers, such as a laptop and a PC. See [Google Drive sync](#google-drive-sync) below.
 - **Error handling and logging** — failures are logged to daily log files next to the database and explained in plain words; the app keeps running whenever it can.
 
 All data lives in a single local SQLite file, which is always the working copy, plus the `names.txt` names list. The only network access is the optional Google Drive sync, which uploads or downloads those whole files. There are no app accounts — sync uses your own Google account.
 
 ## Session names
 
-The Name box only accepts names from `names.txt`, a plain text file in the app directory (next to `pomodoro.db`) with one name per line:
+The Name box only accepts names from `names.txt`, a plain text file in the app directory (next to `pomodoro.db`) with one name per line. It's here:
+
+- Windows: `%LOCALAPPDATA%\PomodoroTimer\names.txt`
+- Linux: `~/.local/share/PomodoroTimer/names.txt`
+
+For example:
 
 ```
 Deep work
@@ -37,7 +46,7 @@ Email
 ```
 
 - The app creates an empty `names.txt` the first time it starts. Add or remove names in any text editor, then restart the app. Names are read once at startup, after sync.
-- Typing in the Name box shows names that contain what you typed, ignoring case. Start is refused if the name isn't in the list.
+- Typing in the Name box shows names that contain what you typed, ignoring case. Start is refused if the name isn't in the list, and the message tells you where the file is.
 - Blank lines and spaces around a name are ignored. A name listed twice (in any letter case) appears once.
 - Removing a name from the file doesn't change History. Past sessions keep their names.
 - With sync set up, `names.txt` syncs through Google Drive the same way as the database (see below), so every computer has the same list.
@@ -50,11 +59,11 @@ Sync is optional. Without a `client_secret.json` next to the executable the app 
 
 How it works:
 
-- **Sign-in** — click **Sign in** in the title bar. Your browser opens for Google's sign-in; if it doesn't, the dialog shows a link you can open yourself. The app asks only for the `drive.file` permission, so it can see only the file it created, not the rest of your Drive.
+- **Sign-in** — click **Sign in** next to the sync status, or **Sync** in the top bar. Your browser opens for Google's sign-in; if it doesn't, the dialog shows a link you can open yourself. The app asks only for the `drive.file` permission, so it can see only the files it created, not the rest of your Drive.
 - **Two files in Drive** — the app keeps exactly one `pomodoro.db` in your Drive, at `PomodoroTimer/pomodoro.db` (tagged with the app property `pomodoroSync=primary`), and one names list at `PomodoroTimer/names.txt` (tagged `pomodoroSync=names`). It always updates those same files. Drive keeps their earlier versions in each file's version history.
   - The app creates the `PomodoroTimer` folder itself and finds it by an app property, so renaming it is fine. A folder you create by hand isn't used, because `drive.file` doesn't let the app see it.
   - A `pomodoro.db` that an earlier version put at the top of My Drive is moved into the folder on its next upload. It keeps the same file and version history.
-- **When it syncs** — at startup, before the database is opened, the window shows "Syncing…". At close, the app uploads what changed, allowing about 30 seconds; if the upload fails, the next start uploads it. There's no background sync; after a problem you can press **Retry** in the title bar.
+- **When it syncs** — at startup, before the database is opened, the window shows "Syncing…". At close, the app uploads what changed, allowing about 30 seconds; if the upload fails, the next start uploads it. There's no background sync. To sync at any other time, press **Sync** in the top bar. It runs the same checks and prompts as at startup, asks you to sign in if needed, and is disabled while a sync is running. After a problem you can also press **Retry** next to the sync status.
 - **Change detection** — the app compares content hashes (MD5) of the local file, the Drive file, and the version recorded at the last sync. It doesn't compare timestamps.
   - If only Drive changed, the local copy is backed up and then replaced.
   - If only the local copy changed, it's uploaded.
@@ -102,11 +111,12 @@ src/
                              No reference to Google libraries.
   PomodoroTimer.App/        Avalonia UI
     ViewModels/              MainWindowViewModel, DashboardViewModel, HistoryViewModel, SyncStatusViewModel and friends (plain INotifyPropertyChanged, no framework)
-    Views/                   MainWindow.axaml (Timer, History, and Dashboard pages, sync status, "Syncing…" overlay); code-behind holds the digits-only input filter.
-                             MessageDialog (small modal used for the conflict prompt, sign-in link, and error messages)
+    Views/                   MainWindow.axaml (Timer, History, and Dashboard pages, Sync button, sync status, "Syncing…" overlay); code-behind holds the digits-only input filter.
+                             MessageDialog (small modal used for the conflict prompts, sign-in link, close prompt, and error messages)
     Services/                NotificationService, SoundService, NotificationManagerFactory,
                              GoogleAuthService + GoogleDriveFileStore (Google Drive implementation of ICloudFileStore),
-                             SyncCoordinator (startup/retry/shutdown sync and prompts), ErrorReporter, AppPaths
+                             SyncCoordinator (startup, Sync button/Retry, and shutdown sync of both files, and their prompts),
+                             ErrorReporter, AppPaths
     Assets/complete.wav      Bundled completion chime
 tests/
   PomodoroTimer.Core.Tests/  xUnit tests for TimerEngine, DashboardService, the SQLite repositories, NameList, and sync
@@ -125,7 +135,7 @@ The database file lives at:
 - Windows: `%LOCALAPPDATA%\PomodoroTimer\pomodoro.db`
 - Linux: `~/.local/share/PomodoroTimer/pomodoro.db`
 
-The path depends only on the user account, not on where the app runs from. Debug builds (`dotnet run`, `scripts/run.*`) use a separate `PomodoroTimer-Dev` folder next to it, with their own database, sync state, sign-in token, logs, and backups, so development never touches the real history. In Google Drive, a Debug build syncs `pomodoro-dev.db` (tagged `{ "pomodoroSync": "dev" }`) and `names-dev.txt` (tagged `{ "pomodoroSync": "names-dev" }`) in the same `PomodoroTimer` folder and never sees the real `pomodoro.db` or `names.txt`.
+The path depends only on the user account, not on where the app runs from. Debug builds (`dotnet run`, `scripts/run.*`) use a separate `PomodoroTimer-Dev` folder next to it, with their own database, names list, sync state, sign-in token, logs, and backups, so development never touches the real history. In Google Drive, a Debug build syncs `pomodoro-dev.db` (tagged `{ "pomodoroSync": "dev" }`) and `names-dev.txt` (tagged `{ "pomodoroSync": "names-dev" }`) in the same `PomodoroTimer` folder and never sees the real `pomodoro.db` or `names.txt`.
 
 ### Files in the app directory
 
@@ -155,7 +165,6 @@ No sync bookkeeping is stored inside the database. The logs never contain OAuth 
 - No installer/deployment automation (per CLAUDE.md's non-goals) — publish produces a runnable folder/executable only.
 - Sync is one device at a time and never merges. If two computers change the history (or the names list) before either syncs, you choose which copy to keep. The other copy stays in a local backup or in Drive's version history.
 - Changes to `names.txt` show up in the app after a restart, not while it's running.
-- Closing the app while a timer or stopwatch is running doesn't save that session, as before. Everything that was saved is uploaded at close.
 
 ## Building, running, and publishing
 

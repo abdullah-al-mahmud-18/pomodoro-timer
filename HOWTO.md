@@ -46,7 +46,9 @@ A local run is a Debug build, and it keeps its data apart from the published app
 - Local files go to a separate dev folder: `%LOCALAPPDATA%\PomodoroTimer-Dev\` on Windows or `~/.local/share/PomodoroTimer-Dev/` on Linux. That folder holds the dev `pomodoro.db`, `names.txt`, the sync state files, `google-token/`, logs, and backups.
 - Sync uses `pomodoro-dev.db` and `names-dev.txt` in the same `PomodoroTimer` folder in Google Drive. The real `pomodoro.db` and `names.txt` there are never read or written by a dev run.
 
-The first dev run asks you to sign in to Google once (the dev token is stored separately). To start from an empty dev history, close the app and delete `pomodoro.db` in the dev folder. If sync is set up and `pomodoro-dev.db` exists in Google Drive, the next launch downloads it again. To start completely fresh, also delete the dev folder's `sync-state.json` and `pomodoro-dev.db` in Google Drive. Leave the real `pomodoro.db` there alone.
+The first dev run asks you to sign in to Google once (the dev token is stored separately). To start from an empty dev history, close the app and delete `pomodoro.db` in the dev folder. If sync is set up and `pomodoro-dev.db` exists in Google Drive, the next launch downloads it again. To start completely fresh, also delete the dev folder's `names.txt`, `sync-state.json`, and `sync-state-names.json`, plus `pomodoro-dev.db` and `names-dev.txt` in Google Drive. Leave the real `pomodoro.db` and `names.txt` there alone.
+
+The app won't start a session until the names list has at least one name. For a dev run, add a few names to `names.txt` in the dev folder and restart the app.
 
 Log files (`pomodoro-<date>.log`) are written to the same folder as the database in use. The first log line of each run shows whether it's a development or release build and which folder it uses.
 
@@ -84,7 +86,7 @@ The app looks for `client_secret.json` in the folder that contains the executabl
 
 ### 5. Sign in
 
-Start the app and click **Sign in** in the title bar. Your browser opens so you can sign in to Google. On Ubuntu this uses `xdg-open`. If no browser opens, copy the link shown in the sign-in dialog into a browser. After you allow access, the app syncs straight away. The database goes to `PomodoroTimer/pomodoro.db` in your My Drive, and the app creates the folder itself. After that it syncs at every start and close.
+Start the app and click **Sign in** next to the sync status, or **Sync** in the top bar. Your browser opens so you can sign in to Google. On Ubuntu this uses `xdg-open`. If no browser opens, copy the link shown in the sign-in dialog into a browser. After you allow access, the app syncs straight away. The database goes to `PomodoroTimer/pomodoro.db` and the names list to `PomodoroTimer/names.txt` in your My Drive, and the app creates the folder itself. After that it syncs at every start and close, and whenever you press **Sync**.
 
 To sign out on a computer, close the app and delete the `google-token` folder in the app directory.
 
