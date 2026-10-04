@@ -4,9 +4,9 @@
 
 A cross-platform Pomodoro / timer & stopwatch desktop app built with Avalonia UI. Runs on **Windows 11** and **Ubuntu 24.04** from a single codebase.
 
-**Current version: 2.2.1.** See [RELEASE.md](RELEASE.md) for what changed in each release.
+**Current version: 2.3.0.** See [RELEASE.md](RELEASE.md) for what changed in each release.
 
-> **Upgrading from 2.1.x?** Session names now come from a list you keep in `names.txt`. After the first start of 2.2.1, add your names to that file (one per line) and restart the app. Until then you can't start a session. See [Session names](#session-names). Your history carries over unchanged.
+> **Upgrading from 2.1.x?** Session names now come from a list you keep in `names.txt`. After the first start of 2.2.1 or later, add your names to that file (one per line) and restart the app. Until then you can't start a session. See [Session names](#session-names). Your history carries over unchanged.
 
 ## Features
 
@@ -17,7 +17,7 @@ A cross-platform Pomodoro / timer & stopwatch desktop app built with Avalonia UI
 - **Mode** — every session is tagged Work, Study, or Break; a mode must be selected and a name chosen before starting. Mode and Name are cleared when a session ends, ready for the next one.
 - **Time display** — always `HH:MM:SS` (e.g. `00:25:00`), whether idle, running, or paused.
 - **History** — every completed or stopped session is logged with name, mode, category, duration, status, and timestamps.
-  - Filters: **Type** (All / Timer / Stopwatch), **Mode** (All / Work / Study / Break), **Session** (All / Completed / Stopped early), and **Period** (All / Last 7 days / Last 14 days / Last 1 month / Last 3 months / Last 6 months / Last 1 year — rolling windows of 7, 14, 30, 90, 180, and 365 days). Filters reset to All / All / All / Last 7 days each time the page is opened.
+  - Filters: **Type** (All / Timer / Stopwatch), **Mode** (All / Work / Study / Break), **Session** (All / Completed / Stopped early), and a **From** / **To** date range in `YYYY-MM-DD` format. Type a date or pick one from the calendar. Both days are included, and a session counts on the day it started, in local time. Clearing a date leaves that end of the range open. Filters reset to All / All / All / 7 days ago through today each time the page is opened.
   - Delete a single entry with its bin icon, or delete everything the current filters show with **Delete Filtered Data** (asks "Are you sure?" first).
   - Stopwatch sessions always count as Completed, since a stopwatch has no target to stop short of.
 - **Dashboard** — totals for today and for the last 7 days, 14 days, 1 month, 3 months, 6 months, and 1 year (rolling 7/14/30/90/180/365-day windows), plus daily averages and a **Ratio** table (each category's share of the recorded time, as percentages that add up to 100) for the same periods, broken down by Work/Study/Break. Reloaded from the database every time the page is opened, and after deletes in History. It always counts all sessions and ignores History's filters.

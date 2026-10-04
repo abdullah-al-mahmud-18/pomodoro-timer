@@ -1,5 +1,24 @@
 # Release notes
 
+## 2.3.0 — 2026-10-04
+
+Pomodoro Timer 2.3.0 lets you choose any date range on the History page. Everything else works as in 2.2.1, and your history and names list carry over unchanged.
+
+This release is for **Windows 11** and **Ubuntu 24.04**. Both have the same features and share one history format.
+
+### What's new in 2.3.0
+
+**Pick your own dates in History**
+
+- The **Period** list on the History page is gone. In its place are two date boxes, **From** and **To**, so you can show any range of days, not just the fixed periods.
+- Dates use the `YYYY-MM-DD` format, for example `2026-10-04`. Type a date, or click the box and pick one from the calendar.
+- Both days are included. A session counts on the day it started.
+- Each time you open the History page, **From** is set to 7 days ago and **To** to today.
+- Clear a box to leave that end open. For example, clear **From** to see everything up to the **To** date.
+- **Delete Filtered Data** deletes only the sessions shown for the dates you picked, as before.
+
+The Dashboard is unchanged. It still shows its fixed periods and ignores the History filters.
+
 ## 2.2.1 — 2026-10-01
 
 Pomodoro Timer 2.2.1 lets you pick session names from a list you keep yourself, and syncs that list between your computers along with your history. It also adds a **Sync** button and saves a running session if you close the app. Your history carries over unchanged.
@@ -155,6 +174,7 @@ For sync to work, the app folder needs a `client_secret.json` file, which links 
 
 ### Upgrading
 
+- **From 2.2.1:** replace the old app folder with the new one, and copy your `client_secret.json` into it if you use sync. Your history, names list, sync settings, and Google sign-in carry over.
 - **From 2.1.x:** replace the old app folder with the new one, and copy your `client_secret.json` into it if you use sync. Your history, sync settings, and Google sign-in carry over. Start the app once, add your names to `names.txt`, and restart it (see [Your names list](#your-names-list)).
 - **From 2.0.0 or 2.0.1:** replace the old app folder with the new one. Keep your `client_secret.json` and copy it into the new folder if you use sync. Your history, sync settings, and Google sign-in carry over.
 - **From 1.0:** your history carries over. Replace the old app folder with the new one and leave your data file where it is.
