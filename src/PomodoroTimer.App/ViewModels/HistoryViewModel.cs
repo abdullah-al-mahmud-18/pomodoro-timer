@@ -6,8 +6,9 @@ namespace PomodoroTimer.App.ViewModels;
 
 /// <summary>
 /// Backs the History page: the full session list filtered by Type (All/Timer/Stopwatch), Mode (All/Work/Study/Break),
-/// Session (Completed/Stopped early/All) and Period (rolling last-N-days window, or All). Filters default to
-/// All / All / All / last 7 days each time the page is opened.
+/// Session (Completed/Stopped early/All) and a From/To date range (both days inclusive, local time). Filters default
+/// to All / All / All / today - 7 days through today each time the page is opened. A cleared date leaves that end
+/// of the range open.
 /// </summary>
 public class HistoryViewModel : ViewModelBase
 {
@@ -17,7 +18,8 @@ public class HistoryViewModel : ViewModelBase
     private FilterOption<TimerMode?> _selectedType;
     private FilterOption<SessionCategory?> _selectedMode;
     private FilterOption<bool?> _selectedStatus;
-    private FilterOption<HistoryPeriod> _selectedPeriod;
+    private DateTime? _fromDate;
+    private DateTime? _toDate;
     private bool _isConfirmingDeleteFiltered;
 
     public HistoryViewModel(SessionRepository sessionRepository, DashboardViewModel dashboardViewModel)
@@ -55,21 +57,11 @@ public class HistoryViewModel : ViewModelBase
             new("Stopped early", false)
         };
 
-        PeriodOptions = new List<FilterOption<HistoryPeriod>>
-        {
-            new("All", HistoryPeriod.All),
-            new("Last 7 days", HistoryPeriod.Last7Days),
-            new("Last 14 days", HistoryPeriod.Last14Days),
-            new("Last 1 month", HistoryPeriod.Last30Days),
-            new("Last 3 months", HistoryPeriod.Last90Days),
-            new("Last 6 months", HistoryPeriod.Last180Days),
-            new("Last 1 year", HistoryPeriod.Last365Days)
-        };
-
         _selectedType = TypeOptions[0];
         _selectedMode = ModeOptions[0];
         _selectedStatus = StatusOptions[0];
-        _selectedPeriod = DefaultPeriod;
+        _fromDate = DefaultFromDate;
+        _toDate = DefaultToDate;
     }
 
     public ObservableCollection<SessionItemViewModel> Sessions { get; }
@@ -98,9 +90,9 @@ public class HistoryViewModel : ViewModelBase
     public List<FilterOption<TimerMode?>> TypeOptions { get; }
     public List<FilterOption<SessionCategory?>> ModeOptions { get; }
     public List<FilterOption<bool?>> StatusOptions { get; }
-    public List<FilterOption<HistoryPeriod>> PeriodOptions { get; }
 
-    private FilterOption<HistoryPeriod> DefaultPeriod => PeriodOptions.First(o => o.Value == HistoryPeriod.Last7Days);
+    private static DateTime DefaultFromDate => DateTime.Today.AddDays(-7);
+    private static DateTime DefaultToDate => DateTime.Today;
 
     public FilterOption<bool?> SelectedStatus
     {
@@ -138,19 +130,33 @@ public class HistoryViewModel : ViewModelBase
         }
     }
 
-    public FilterOption<HistoryPeriod> SelectedPeriod
+    /// <summary>First day shown (inclusive), or null for no lower bound.</summary>
+    public DateTime? FromDate
     {
-        get => _selectedPeriod;
+        get => _fromDate;
         set
         {
-            if (SetField(ref _selectedPeriod, value))
+            if (SetField(ref _fromDate, value?.Date))
             {
                 ApplyFilters();
             }
         }
     }
 
-    /// <summary>Resets all filters to their defaults (All / All / All / last 7 days) and reloads. Call when the page is opened.</summary>
+    /// <summary>Last day shown (inclusive), or null for no upper bound.</summary>
+    public DateTime? ToDate
+    {
+        get => _toDate;
+        set
+        {
+            if (SetField(ref _toDate, value?.Date))
+            {
+                ApplyFilters();
+            }
+        }
+    }
+
+    /// <summary>Resets all filters to their defaults (All / All / All / today - 7 days through today) and reloads. Call when the page is opened.</summary>
     public void ResetAndReload()
     {
         IsConfirmingDeleteFiltered = false;
@@ -158,11 +164,13 @@ public class HistoryViewModel : ViewModelBase
         _selectedType = TypeOptions[0];
         _selectedMode = ModeOptions[0];
         _selectedStatus = StatusOptions[0];
-        _selectedPeriod = DefaultPeriod;
+        _fromDate = DefaultFromDate;
+        _toDate = DefaultToDate;
         OnPropertyChanged(nameof(SelectedType));
         OnPropertyChanged(nameof(SelectedMode));
         OnPropertyChanged(nameof(SelectedStatus));
-        OnPropertyChanged(nameof(SelectedPeriod));
+        OnPropertyChanged(nameof(FromDate));
+        OnPropertyChanged(nameof(ToDate));
 
         ApplyFilters();
     }
@@ -197,9 +205,9 @@ public class HistoryViewModel : ViewModelBase
 
     private void ApplyFilters()
     {
-        var cutoff = SelectedPeriod.Value == HistoryPeriod.All
-            ? (DateTimeOffset?)null
-            : DateTimeOffset.Now.Date.AddDays(-DaysFor(SelectedPeriod.Value) + 1);
+        // Compare local calendar days, so a session counts on the day it started on this computer's clock.
+        var from = FromDate;
+        var toExclusive = ToDate?.AddDays(1);
 
         Sessions.Clear();
         foreach (var session in _sessionRepository.GetAll())
@@ -219,7 +227,13 @@ public class HistoryViewModel : ViewModelBase
                 continue;
             }
 
-            if (cutoff is not null && session.StartedAt.ToLocalTime() < cutoff)
+            var startedLocal = session.StartedAt.ToLocalTime().DateTime;
+            if (from is not null && startedLocal < from)
+            {
+                continue;
+            }
+
+            if (toExclusive is not null && startedLocal >= toExclusive)
             {
                 continue;
             }
@@ -227,15 +241,4 @@ public class HistoryViewModel : ViewModelBase
             Sessions.Add(new SessionItemViewModel(session));
         }
     }
-
-    private static int DaysFor(HistoryPeriod period) => period switch
-    {
-        HistoryPeriod.Last7Days => 7,
-        HistoryPeriod.Last14Days => 14,
-        HistoryPeriod.Last30Days => 30,
-        HistoryPeriod.Last90Days => 90,
-        HistoryPeriod.Last180Days => 180,
-        HistoryPeriod.Last365Days => 365,
-        _ => throw new ArgumentOutOfRangeException(nameof(period))
-    };
 }

@@ -180,6 +180,12 @@
 
                 <!-- Filters -->
                 <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="16" Margin="0,0,0,12">
+                    <StackPanel.Styles>
+                        <!-- The Fluent calendar button draws today's day number inside its icon; hide it, keep the icon. -->
+                        <Style Selector="CalendarDatePicker /template/ Button#PART_Button /template/ TextBlock">
+                            <Setter Property="IsVisible" Value="False" />
+                        </Style>
+                    </StackPanel.Styles>
                     <StackPanel Spacing="4">
                         <TextBlock Text="Type" FontSize="12" Foreground="Gray" />
                         <ComboBox ItemsSource="{Binding TypeOptions}"
@@ -199,10 +205,20 @@
                                   Width="140" />
                     </StackPanel>
                     <StackPanel Spacing="4">
-                        <TextBlock Text="Period" FontSize="12" Foreground="Gray" />
-                        <ComboBox ItemsSource="{Binding PeriodOptions}"
-                                  SelectedItem="{Binding SelectedPeriod}"
-                                  Width="140" />
+                        <TextBlock Text="From" FontSize="12" Foreground="Gray" />
+                        <CalendarDatePicker SelectedDate="{Binding FromDate}"
+                                            SelectedDateFormat="Custom"
+                                            CustomDateFormatString="yyyy-MM-dd"
+                                            Watermark="YYYY-MM-DD"
+                                            Width="140" />
+                    </StackPanel>
+                    <StackPanel Spacing="4">
+                        <TextBlock Text="To" FontSize="12" Foreground="Gray" />
+                        <CalendarDatePicker SelectedDate="{Binding ToDate}"
+                                            SelectedDateFormat="Custom"
+                                            CustomDateFormatString="yyyy-MM-dd"
+                                            Watermark="YYYY-MM-DD"
+                                            Width="140" />
                     </StackPanel>
                     <Button Content="Delete Filtered Data"
                             Command="{Binding DeleteFilteredCommand}"
