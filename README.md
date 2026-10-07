@@ -169,3 +169,7 @@ No sync bookkeeping is stored inside the database. The logs never contain OAuth 
 ## Building, running, and publishing
 
 See [HOWTO.md](HOWTO.md).
+
+## License
+
+[MIT](LICENSE) © 2026 Abdullah Al Mahmud
